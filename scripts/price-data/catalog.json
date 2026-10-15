@@ -1,0 +1,204 @@
+{
+  "_comment": "Curated price items. Prices are NOT written here: build_price_seed.py copies them from the NBS Selected Food Price Watch workbook by exact item label. Only items whose unit NBS documents are included; 'unitEvidence' records where the unit comes from.",
+  "items": [
+    {
+      "id": "tomatoes-1kg",
+      "nbsLabel": "Tomatoes, fresh ",
+      "name": "Tomatoes",
+      "unitLabel": "1 kg",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["tomato", "tomatoes", "fresh tomatoes"],
+      "unitEvidence": "Report text: \"the average price of Tomatoes 1kg\""
+    },
+    {
+      "id": "beans-brown-1kg",
+      "nbsLabel": "Beans Brown",
+      "name": "Brown beans",
+      "unitLabel": "1 kg",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["beans", "brown beans", "honey beans", "oloyin", "ewa"],
+      "unitEvidence": "Report text: \"the average price of bean Brown (1kg)\""
+    },
+    {
+      "id": "garri-white-1kg",
+      "nbsLabel": "Garri white",
+      "name": "White garri",
+      "unitLabel": "1 kg",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["garri", "gari", "white garri", "white gari"],
+      "unitEvidence": "Report text: \"Garri white sold loose (1kg)\""
+    },
+    {
+      "id": "onions-1kg",
+      "nbsLabel": "Onions, fresh ",
+      "name": "Onions",
+      "unitLabel": "1 kg",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["onion", "onions", "alubosa"],
+      "unitEvidence": "Report text: \"onion Bulb (1kg)\""
+    },
+    {
+      "id": "ginger-1kg",
+      "nbsLabel": "Ginger, fresh",
+      "name": "Ginger",
+      "unitLabel": "1 kg",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["ginger"],
+      "unitEvidence": "Report text: \"Ginger Fresh (1kg)\""
+    },
+    {
+      "id": "eggs-crate-30",
+      "nbsLabel": "Agric hen eggs, (a Crate of 30 pieces)",
+      "name": "Eggs",
+      "unitLabel": "crate of 30",
+      "unitQuantity": 30,
+      "unitMeasure": "piece",
+      "aliases": ["egg", "eggs", "crate of eggs", "agric eggs"],
+      "unitEvidence": "Item label: \"(a Crate of 30 pieces)\""
+    },
+    {
+      "id": "palm-oil-75cl",
+      "nbsLabel": "Palm oil, 75cl",
+      "name": "Palm oil",
+      "unitLabel": "75 cl bottle",
+      "unitQuantity": 750,
+      "unitMeasure": "ml",
+      "aliases": ["palm oil", "red oil", "red palm oil", "epo pupa"],
+      "unitEvidence": "Item label: \"75cl\""
+    },
+    {
+      "id": "groundnut-oil-75cl",
+      "nbsLabel": "Groundnut oil, 75cl",
+      "name": "Groundnut oil",
+      "unitLabel": "75 cl bottle",
+      "unitQuantity": 750,
+      "unitMeasure": "ml",
+      "aliases": ["groundnut oil", "peanut oil"],
+      "unitEvidence": "Item label: \"75cl\""
+    },
+    {
+      "id": "vegetable-oil-75cl",
+      "nbsLabel": "Vegetable Oil, 75cl",
+      "name": "Vegetable oil",
+      "unitLabel": "75 cl bottle",
+      "unitQuantity": 750,
+      "unitMeasure": "ml",
+      "aliases": ["vegetable oil", "veg oil", "cooking oil"],
+      "unitEvidence": "Item label: \"75cl\""
+    },
+    {
+      "id": "bread-sliced-450g",
+      "nbsLabel": "Bread (sliced), 450g",
+      "name": "Sliced bread",
+      "unitLabel": "450 g loaf",
+      "unitQuantity": 450,
+      "unitMeasure": "g",
+      "aliases": ["bread", "sliced bread", "loaf of bread"],
+      "unitEvidence": "Item label: \"450g\""
+    },
+    {
+      "id": "bread-unsliced-450g",
+      "nbsLabel": "Bread (unsliced), 450g",
+      "name": "Unsliced bread",
+      "unitLabel": "450 g loaf",
+      "unitQuantity": 450,
+      "unitMeasure": "g",
+      "aliases": ["unsliced bread", "agege bread"],
+      "unitEvidence": "Item label: \"450g\""
+    },
+    {
+      "id": "semovita-1kg",
+      "nbsLabel": "Semovita, Prepacked (1kg)",
+      "name": "Semovita",
+      "unitLabel": "1 kg pack",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["semovita", "semolina"],
+      "unitEvidence": "Item label: \"(1kg)\""
+    },
+    {
+      "id": "wheat-flour-2kg",
+      "nbsLabel": "Wheat Flour, Prepacked (2kg)",
+      "name": "Wheat flour",
+      "unitLabel": "2 kg pack",
+      "unitQuantity": 2000,
+      "unitMeasure": "g",
+      "aliases": ["flour", "wheat flour"],
+      "unitEvidence": "Item label: \"(2kg)\""
+    },
+    {
+      "id": "evaporated-milk-150g",
+      "nbsLabel": "Tin Milk-Evaporated, Peak Milk, 150g",
+      "name": "Evaporated milk (Peak)",
+      "unitLabel": "150 g tin",
+      "unitQuantity": 150,
+      "unitMeasure": "g",
+      "aliases": ["evaporated milk", "tin milk", "tinned milk", "peak milk"],
+      "unitEvidence": "Item label: \"150g\""
+    },
+    {
+      "id": "groundnuts-roasted-75cl",
+      "nbsLabel": "Groundnuts, roasted,75cl bottle",
+      "name": "Roasted groundnuts",
+      "unitLabel": "75 cl bottle",
+      "unitQuantity": 1,
+      "unitMeasure": "piece",
+      "aliases": ["groundnuts", "groundnut", "roasted groundnuts", "peanuts", "epa"],
+      "unitEvidence": "Item label: \"75cl bottle\""
+    },
+    {
+      "id": "watermelon-medium",
+      "nbsLabel": "Watermelon whole, medium size fresh",
+      "name": "Watermelon",
+      "unitLabel": "1 medium watermelon",
+      "unitQuantity": 1,
+      "unitMeasure": "piece",
+      "aliases": ["watermelon", "water melon"],
+      "unitEvidence": "Item label: \"whole, medium size\""
+    },
+    {
+      "id": "yam-tuber",
+      "nbsLabel": "Yam Tuber",
+      "name": "Yam",
+      "unitLabel": "1 tuber (size not specified)",
+      "unitQuantity": 1,
+      "unitMeasure": "piece",
+      "aliases": ["yam", "yams", "yam tuber", "isu", "doya"],
+      "unitEvidence": "Item label: \"Yam Tuber\" (priced per tuber; NBS does not state the size)"
+    }
+  ],
+  "excluded": {
+    "_comment": "NBS publishes prices for these, but the report does not state their unit, so they are not seeded until the unit is documented.",
+    "labels": [
+      "Rice Local, short-Grained",
+      "Rice Long-Grained (Imported)",
+      "Local Rice (Broken)",
+      "Beans white",
+      "Garri Yellow",
+      "Plantain (ripe)",
+      "Plantain (unripe)",
+      "Irish Potatoe",
+      "Sweet potatoes ",
+      "Maize (Corn) Grains (White) sold loose",
+      "Carrots, fresh",
+      "Beef Boneless",
+      "Goat Meat Bone in",
+      "Chicken meat (Frozen)",
+      "Chicken Wings",
+      "Chicken feet",
+      "Cat fresh fish",
+      "Tilapia fresh fish (Epiya)",
+      "Mackerel, Frozen",
+      "Titus, frozen",
+      "Smoked fish (Mackerel)",
+      "Dried fish, Bonga",
+      "Cray fish small white",
+      "Agric hen eggs, "
+    ]
+  }
+}

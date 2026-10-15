@@ -1,0 +1,1077 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum FoodCategory {
+  fruit
+  vegetable
+  grain
+  legume
+  nut_seed
+  tuber
+  egg
+  meat
+  fish
+  dairy
+  oil
+}
+
+/// One food with nutrient values per 100 g edible portion, copied from a
+/// documented source (ADR-006, ADR-022). Never edited by hand: rows come from
+/// prisma/seed/foods.json, which scripts/food-data/build_food_seed.py builds.
+model Food {
+  id             String       @id
+  name           String
+  category       FoodCategory
+  scientificName String?
+  /// Allergen tags (e.g. "peanut", "egg", "milk", "fish"), used by the Phase 5 safety layer.
+  allergens      String[]
+
+  energyKcal     Float?
+  energyKj       Float?
+  waterG         Float?
+  proteinG       Float?
+  fatG           Float?
+  carbohydrateG  Float?
+  fiberG         Float?
+  calciumMg      Float?
+  ironMg         Float?
+  potassiumMg    Float?
+  sodiumMg       Float?
+  zincMg         Float?
+  vitaminARaeMcg Float?
+  vitaminCMg     Float?
+  folateDfeMcg   Float?
+
+  source         String
+  sourceUrl      String
+  sourceVersion  String
+  sourceFoodCode String
+  sourceFoodName String
+  retrievedAt    DateTime @db.Date
+
+  /// Typical household serving. Grams come from their own documented source.
+  servingLabel         String?
+  servingGrams         Float?
+  servingSource        String?
+  servingSourceUrl     String?
+  servingSourceVersion String?
+  servingSourceRef     String?
+
+  aliases   FoodAlias[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+/// Names a user might type, normalised (lowercase, no accents). Unique across
+/// all foods so a lookup is never ambiguous (ADR-008).
+model FoodAlias {
+  alias  String @id
+  foodId String
+  food   Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@index([foodId])
+}
+
+enum UnitMeasure {
+  g
+  ml
+  piece
+}
+
+/// National average plus the six geopolitical zones, as published by NBS.
+enum PriceRegion {
+  national
+  north_central
+  north_east
+  north_west
+  south_east
+  south_south
+  south_west
+}
+
+/// Something a shopper can buy, in the unit its price source documents
+/// (ADR-036). Rows come from prisma/seed/prices.json, built by
+/// scripts/price-data/build_price_seed.py.
+model PriceItem {
+  id              String           @id
+  name            String
+  unitLabel       String
+  unitQuantity    Float
+  unitMeasure     UnitMeasure
+  /// Where the unit comes from in the source (prices are never seeded without one).
+  unitEvidence    String
+  sourceItemLabel String
+  aliases         PriceItemAlias[]
+  estimates       PriceEstimate[]
+}
+
+/// Names a user might type for a price item, normalised and unique.
+model PriceItemAlias {
+  alias  String    @id
+  itemId String
+  item   PriceItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+}
+
+/// An estimated retail price (CLAUDE.md §14). Never a guaranteed current price.
+model PriceEstimate {
+  id            Int         @id @default(autoincrement())
+  itemId        String
+  item          PriceItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  region        PriceRegion
+  price         Decimal     @db.Decimal(12, 2)
+  currency      String      @default("NGN")
+  source        String
+  sourceUrl     String
+  sourceVersion String
+  /// First day of the month the price refers to.
+  effectiveDate DateTime    @db.Date
+  retrievedAt   DateTime    @db.Date
+
+  @@unique([itemId, region, effectiveDate])
+}
+
+/// Chat state for one conversation (ADR-039). Holds raw messages and personal
+/// facts (ages, pregnancy, allergies), so rows expire after 2 hours of
+/// inactivity and are deleted (CLAUDE.md §28).
+model Conversation {
+  id            String   @id
+  /// [{ role: "user" | "assistant", content: string }], newest last, capped.
+  messages      Json
+  currentIntent String
+  /// Declared allergen keys, e.g. ["peanut"].
+  allergies     String[]
+  /// Known user facts (lib/conversation/profile.ts UserProfile).
+  profile       Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  expiresAt     DateTime
+
+  @@index([expiresAt])
+}
+
+/// One fixed rate-limit window per client (ADR-040). `key` is an HMAC of the
+/// client address, never the address itself; rows expire with their window.
+model RateLimit {
+  key         String   @id
+  windowStart DateTime
+  count       Int
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
+
+enum AIProviderKind {
+  gemini
+  claude
+  openai
+  deepseek
+  /// Only in audit events: the XEELAA integration (ADR-052).
+  xeelaa
+}
+
+/// verified: usable and can be activated. failed: a re-check found the key or
+/// model unusable. revoked: the key was destroyed; the row stays for the audit.
+enum AICredentialStatus {
+  verified
+  failed
+  revoked
+}
+
+/// A system-owned AI provider credential plus the model to use with it
+/// (ADR-047). Only verified keys are ever stored. The key is encrypted with
+/// AES-256-GCM (AI_CREDENTIALS_KEY) and never leaves the server; `keyHint`
+/// is the masked form shown to admins.
+model AIProviderConfig {
+  id             String             @id
+  provider       AIProviderKind
+  model          String
+  label          String?
+  /// "v1:<iv>:<tag>:<ciphertext>" (base64url). Null once revoked.
+  encryptedKey   String?
+  /// Masked key for display, e.g. "sk-••••••••9X2A".
+  keyHint        String
+  /// HMAC of the key, used to spot the same key being added twice.
+  keyFingerprint String
+  status         AICredentialStatus
+  verifiedAt     DateTime?
+  activatedAt    DateTime?
+  deactivatedAt  DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  active         AIActiveConfig?
+
+  @@index([keyFingerprint])
+}
+
+/// The configuration chat uses. A single row (id = 1), so at most one
+/// configuration can be active. No row means chat uses environment variables.
+model AIActiveConfig {
+  id        Int              @id @default(1)
+  configId  String           @unique
+  config    AIProviderConfig @relation(fields: [configId], references: [id], onDelete: Restrict)
+  updatedAt DateTime         @updatedAt
+}
+
+enum AIConfigAuditAction {
+  credential_added
+  verification_succeeded
+  verification_failed
+  activated
+  deactivated
+  revoked
+  model_changed
+}
+
+/// Metadata-only audit trail for credential management. Never holds a key.
+model AIConfigAuditEvent {
+  id        Int                 @id @default(autoincrement())
+  action    AIConfigAuditAction
+  /// Null for a failed add, where no configuration was stored.
+  configId  String?
+  provider  AIProviderKind
+  model     String
+  keyHint   String
+  /// A short reason code, e.g. "invalid_key" or "model_changed:old-model".
+  detail    String?
+  actor     String
+  createdAt DateTime            @default(now())
+
+  @@index([createdAt])
+}
+
+enum XeelaaStatus {
+  verified
+  invalid
+}
+
+/// The XEELAA API integration (ADR-052). A single row (id = 1). The key
+/// ("xla_<id>:<secret>") is encrypted like AI provider keys. When enabled and
+/// verified, chat tries XEELAA first and falls back to the default provider.
+model XeelaaIntegration {
+  id            Int          @id @default(1)
+  encryptedKey  String?
+  keyHint       String
+  enabled       Boolean      @default(false)
+  status        XeelaaStatus
+  lastCheckedAt DateTime?
+  /// A reason code from the last failure, e.g. "invalid_key". Never a provider message.
+  lastError     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+// ─────────────────────────── Platform foundation (Phase A, ADR-061) ───────────────────────────
+
+enum UserStatus {
+  active
+  suspended
+}
+
+/// A person with an account (end user, nutritionist, vendor or hospital staff,
+/// platform administrator). Chat stays usable without an account.
+model User {
+  id                   String                @id @default(uuid())
+  /// Lowercased and trimmed.
+  email                String                @unique
+  name                 String
+  /// scrypt hash (lib/admin/password.ts format).
+  passwordHash         String
+  status               UserStatus            @default(active)
+  emailVerifiedAt      DateTime?
+  /// Access needs the person chose to share (lib/hospitals/accessibility NEEDS), used to
+  /// prefill hospital bookings (ADR-075). Never inferred.
+  accessibilityNeeds   String[]              @default([])
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  sessions             Session[]
+  adminRoles           AdminRoleAssignment[]
+  memberships          Membership[]
+  authTokens           AuthToken[]
+  subscriptions        Subscription[]
+  nutritionist         NutritionistProfile?
+  appointments         Appointment[]         @relation("ClientAppointments")
+  notifications        Notification[]
+  plannerSessions      PlannerSession[]
+  mealPlans            MealPlan[]
+  hospitalAppointments HospitalAppointment[] @relation("PatientAppointments")
+  accessConversations  AccessConversation[]  @relation("PatientConversations")
+  oauthAccounts        OAuthAccount[]
+}
+
+enum SessionApp {
+  web
+  admin
+}
+
+/// A signed-in browser. Only the SHA-256 of the cookie token is stored.
+model Session {
+  id         String     @id
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  app        SessionApp
+  expiresAt  DateTime
+  lastSeenAt DateTime   @default(now())
+  createdAt  DateTime   @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+enum AuthTokenPurpose {
+  verify_email
+  reset_password
+}
+
+/// One-time email links. Only the SHA-256 of the token is stored.
+/// A sign-in identity from another provider (ADR-071): Google's stable
+/// account id ("sub"), never its tokens. One per provider account.
+model OAuthAccount {
+  id                String   @id @default(uuid())
+  provider          String
+  providerAccountId String
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model AuthToken {
+  id        String           @id
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   AuthTokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+}
+
+enum AdminRole {
+  super_admin
+  platform_admin
+  nutritionist_admin
+  vendor_admin
+  hospital_admin
+  support_admin
+  finance_admin
+}
+
+/// Platform administration roles (n-equals). Permissions per role: lib/auth/permissions.ts.
+model AdminRoleAssignment {
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      AdminRole
+  createdAt DateTime  @default(now())
+
+  @@id([userId, role])
+}
+
+enum OrganizationKind {
+  vendor
+  hospital
+}
+
+enum OrganizationStatus {
+  pending
+  verified
+  rejected
+  suspended
+}
+
+/// A business on the platform: a vendor or a hospital. Members act for it.
+model Organization {
+  id                   String                @id @default(uuid())
+  kind                 OrganizationKind
+  name                 String
+  status               OrganizationStatus    @default(pending)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  memberships          Membership[]
+  subscriptions        Subscription[]
+  vendor               VendorProfile?
+  products             Product[]
+  hospital             HospitalProfile?
+  departments          HospitalDepartment[]
+  hospitalAppointments HospitalAppointment[]
+  accessConversations  AccessConversation[]
+
+  @@index([kind, status])
+}
+
+enum MembershipRole {
+  owner
+  admin
+  staff
+  doctor
+  nurse
+}
+
+model Membership {
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           MembershipRole
+  /// Hospital staff: the departments they handle (ADR-068).
+  departmentIds  String[]       @default([])
+  createdAt      DateTime       @default(now())
+
+  @@id([userId, organizationId])
+  @@index([organizationId])
+}
+
+/// Platform-wide audit trail (metadata only; never secrets or message text).
+model AuditLog {
+  id          Int      @id @default(autoincrement())
+  actorUserId String?
+  action      String
+  targetType  String
+  targetId    String?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetType, targetId])
+}
+
+/// Non-secret platform settings edited in n-equals (feature flags, free-tier
+/// limits, billing grace period). Secrets stay in environment variables.
+model PlatformSetting {
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+enum PlanAudience {
+  user
+  nutritionist
+  vendor
+  hospital
+}
+
+enum BillingInterval {
+  monthly
+  yearly
+}
+
+/// A subscription plan. Entitlements are data, not code (ADR-062).
+model Plan {
+  id                String          @id @default(uuid())
+  code              String          @unique
+  name              String
+  description       String?
+  audience          PlanAudience
+  interval          BillingInterval
+  /// In the smallest currency unit (kobo for NGN).
+  priceMinor        Int
+  currency          String          @default("NGN")
+  /// { "mealPlanner.maxDays": 7, ... } validated against lib/billing/entitlements.ts.
+  entitlements      Json            @default("{}")
+  active            Boolean         @default(true)
+  paystackPlanCode  String?
+  flutterwavePlanId String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  subscriptions     Subscription[]
+}
+
+enum SubscriptionStatus {
+  pending
+  active
+  past_due
+  canceled
+  expired
+}
+
+enum PaymentProviderKind {
+  paystack
+  flutterwave
+  manual
+}
+
+/// A user's or an organisation's subscription to a plan.
+model Subscription {
+  id                      String              @id @default(uuid())
+  planId                  String
+  plan                    Plan                @relation(fields: [planId], references: [id])
+  userId                  String?
+  user                    User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId          String?
+  organization            Organization?       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status                  SubscriptionStatus  @default(pending)
+  provider                PaymentProviderKind
+  /// Our checkout reference (sent to the provider as reference / tx_ref).
+  checkoutReference       String?             @unique
+  providerSubscriptionRef String?
+  /// Paystack's email_token, needed to cancel a Paystack subscription.
+  providerToken           String?
+  currentPeriodStart      DateTime?
+  currentPeriodEnd        DateTime?
+  cancelAtPeriodEnd       Boolean             @default(false)
+  graceUntil              DateTime?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([providerSubscriptionRef])
+}
+
+/// Usage of a limited feature in a period (e.g. meal plans generated this month).
+model UsageCounter {
+  subjectKey  String
+  feature     String
+  periodStart DateTime
+  count       Int      @default(0)
+
+  @@id([subjectKey, feature, periodStart])
+}
+
+/// Processed payment webhooks, so a repeated delivery is applied once.
+model PaymentEvent {
+  provider    PaymentProviderKind
+  eventId     String
+  type        String
+  processedAt DateTime            @default(now())
+
+  @@id([provider, eventId])
+}
+
+// ─────────────────────────── Nutritionists (Phase B, ADR-064) ───────────────────────────
+
+enum NutritionistStatus {
+  draft
+  submitted
+  changes_requested
+  verified
+  rejected
+  suspended
+}
+
+enum SessionType {
+  online
+  in_person
+}
+
+/// A nutritionist's professional profile. Listed publicly only when verified
+/// and entitled to a listing (lib/nutritionists/listing.ts).
+model NutritionistProfile {
+  userId          String                  @id
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          NutritionistStatus      @default(draft)
+  title           String                  @default("")
+  bio             String                  @default("")
+  /// Keys from lib/nutritionists/specializations.ts.
+  specializations String[]
+  /// Free-text areas of expertise.
+  expertise       String[]
+  yearsExperience Int                     @default(0)
+  /// A Nigerian state (lib/budget/regions.ts STATES).
+  state           String?
+  city            String                  @default("")
+  sessionTypes    SessionType[]
+  /// Fee per session in kobo. Paid to the nutritionist directly, never through Equals.
+  sessionFeeMinor Int                     @default(0)
+  sessionMinutes  Int                     @default(60)
+  contactEmail    String?
+  contactPhone    String?
+  whatsapp        String?
+  /// Weekly windows in Lagos time: [{ day: 0-6, start: "09:00", end: "17:00" }].
+  availability    Json                    @default("[]")
+  /// Cloudinary public image.
+  photoPublicId   String?
+  photoUrl        String?
+  /// The last message from the reviewer (changes requested, rejection reason).
+  reviewNote      String?
+  submittedAt     DateTime?
+  verifiedAt      DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  qualifications  Qualification[]
+  documents       QualificationDocument[]
+  analyses        QualificationAnalysis[]
+  appointments    Appointment[]
+
+  @@index([status, state])
+}
+
+enum QualificationKind {
+  degree
+  certification
+  registration
+  membership
+}
+
+model Qualification {
+  id                 String              @id @default(uuid())
+  profileId          String
+  profile            NutritionistProfile @relation(fields: [profileId], references: [userId], onDelete: Cascade)
+  kind               QualificationKind
+  title              String
+  institution        String
+  year               Int?
+  registrationNumber String?
+  /// When a licence or registration expires, if it does.
+  expiresOn          DateTime?           @db.Date
+  createdAt          DateTime            @default(now())
+
+  @@index([profileId])
+}
+
+/// An uploaded certificate or licence: a private Cloudinary asset, shown only
+/// to the nutritionist and reviewers through short-lived signed links.
+model QualificationDocument {
+  id         String              @id @default(uuid())
+  profileId  String
+  profile    NutritionistProfile @relation(fields: [profileId], references: [userId], onDelete: Cascade)
+  label      String
+  publicId   String
+  format     String
+  bytes      Int
+  uploadedAt DateTime            @default(now())
+
+  @@index([profileId])
+}
+
+enum AnalysisStatus {
+  completed
+  failed
+  unavailable
+}
+
+/// An assistive qualification review (AI plus deterministic checks). Never a
+/// verification decision on its own.
+model QualificationAnalysis {
+  id            Int                 @id @default(autoincrement())
+  profileId     String
+  profile       NutritionistProfile @relation(fields: [profileId], references: [userId], onDelete: Cascade)
+  status        AnalysisStatus
+  provider      String?
+  promptVersion String
+  /// Deterministic checks (lib/nutritionists/analysis.ts).
+  checks        Json
+  /// Validated AI assessment, when available.
+  assessment    Json?
+  createdAt     DateTime            @default(now())
+
+  @@index([profileId, createdAt])
+}
+
+enum AppointmentStatus {
+  requested
+  accepted
+  declined
+  canceled
+  completed
+}
+
+/// A session request. Fees are paid to the nutritionist on their own terms.
+model Appointment {
+  id             String              @id @default(uuid())
+  nutritionistId String
+  nutritionist   NutritionistProfile @relation(fields: [nutritionistId], references: [userId], onDelete: Cascade)
+  clientId       String
+  client         User                @relation("ClientAppointments", fields: [clientId], references: [id], onDelete: Cascade)
+  sessionType    SessionType
+  startsAt       DateTime
+  minutes        Int
+  /// The fee shown when the request was made, in kobo.
+  feeMinor       Int
+  /// What the client chose to share (max 500 characters).
+  clientNote     String?
+  /// The nutritionist's note or recommendation, shown to the client.
+  recommendation String?
+  status         AppointmentStatus   @default(requested)
+  respondedAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([nutritionistId, startsAt])
+  @@index([clientId, startsAt])
+}
+
+/// In-app notifications. Text never includes health details.
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ─────────────────────────── Meal Planner (Phase C, ADR-066) ───────────────────────────
+
+enum PlannerSessionStatus {
+  intake
+  ready
+  blocked
+  done
+}
+
+/// The conversational intake before a plan is created. Holds health facts the
+/// user shared (ages, pregnancy, allergies, conditions); deleted with the
+/// account, and the user can delete it at any time.
+model PlannerSession {
+  id        String               @id @default(uuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    PlannerSessionStatus @default(intake)
+  /// lib/planner/facts.ts PlannerFacts.
+  facts     Json                 @default("{}")
+  /// [{ role, content }], newest last, capped.
+  messages  Json                 @default("[]")
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  plan      MealPlan?
+
+  @@index([userId, updatedAt])
+}
+
+enum MealPlanStatus {
+  active
+  archived
+}
+
+/// A saved meal plan. Weeks are generated one at a time (ADR-066).
+model MealPlan {
+  id           String          @id @default(uuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId    String?         @unique
+  session      PlannerSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  title        String
+  objective    String
+  /// Snapshot of the intake facts the plan was made for.
+  facts        Json
+  durationDays Int
+  startDate    DateTime        @db.Date
+  status       MealPlanStatus  @default(active)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  weeks        MealPlanWeek[]
+
+  @@index([userId, createdAt])
+}
+
+model MealPlanWeek {
+  id            String   @id @default(uuid())
+  planId        String
+  plan          MealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  /// 0-based.
+  weekIndex     Int
+  /// Validated days (lib/planner/schema.ts PlannerDay[]).
+  days          Json
+  /// App-calculated nutrition per day from the food database.
+  nutrition     Json?
+  /// App-costed shopping list, when the plan includes one.
+  shopping      Json?
+  /// Adjustments made this week (limited by an entitlement).
+  adjustments   Int      @default(0)
+  provider      String?
+  promptVersion String
+  generatedAt   DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([planId, weekIndex])
+}
+
+// ─────────────────────────── Vendors (Phase D, ADR-067) ───────────────────────────
+
+enum ReviewStatus {
+  draft
+  submitted
+  changes_requested
+  verified
+  rejected
+  suspended
+}
+
+/// A vendor business (Organization kind "vendor"). Reviewed before any of its
+/// products can be listed. Organization.status mirrors the review outcome.
+model VendorProfile {
+  organizationId     String       @id
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status             ReviewStatus @default(draft)
+  description        String       @default("")
+  /// Keys from lib/vendors/categories.ts.
+  categories         String[]
+  website            String?
+  contactEmail       String?
+  contactPhone       String?
+  /// A Nigerian state (lib/budget/regions.ts STATES).
+  state              String?
+  city               String       @default("")
+  /// CAC registration number, if the business has one.
+  registrationNumber String?
+  logoPublicId       String?
+  logoUrl            String?
+  reviewNote         String?
+  submittedAt        DateTime?
+  verifiedAt         DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([status])
+}
+
+enum ProductAvailability {
+  in_stock
+  limited
+  seasonal
+  out_of_stock
+}
+
+/// A vendor's product. Promoted only when the product is verified, the vendor
+/// is verified and entitled to a listing (lib/vendors/directory.ts).
+model Product {
+  id                String              @id @default(uuid())
+  organizationId    String
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status            ReviewStatus        @default(draft)
+  name              String
+  /// Key from lib/vendors/categories.ts.
+  category          String
+  description       String
+  /// The vendor's stated benefits; checked for forbidden health claims.
+  benefits          String              @default("")
+  recommendedUse    String              @default("")
+  ingredients       String[]
+  /// Allergen keys: declared by the vendor plus any the app finds in the ingredients.
+  allergens         String[]
+  /// Foods this product is, for matching (e.g. ["yogurt"]). Normalised.
+  matchTerms        String[]
+  /// Values from the vendor's label (not verified by Equals): lib/vendors/product.ts LabelNutrition.
+  labelNutrition    Json?
+  availability      ProductAvailability @default(in_stock)
+  /// [{ kind: "store" | "online", name, state?, city?, url? }]
+  purchaseLocations Json                @default("[]")
+  priceNaira        Int?
+  imagePublicId     String?
+  imageUrl          String?
+  reviewNote        String?
+  submittedAt       DateTime?
+  verifiedAt        DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  stats             ProductStat[]
+
+  @@index([organizationId])
+  @@index([status, category])
+}
+
+/// Daily counts per product for the vendor's analytics. No user identifiers.
+model ProductStat {
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  day         DateTime @db.Date
+  impressions Int      @default(0)
+  views       Int      @default(0)
+  clicks      Int      @default(0)
+
+  @@id([productId, day])
+}
+
+// ─────────────────────────── Hospitals (Phase E, ADR-068) ───────────────────────────
+
+/// A hospital or clinic (Organization kind "hospital"). Listed only when verified.
+model HospitalProfile {
+  organizationId     String       @id
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status             ReviewStatus @default(draft)
+  description        String       @default("")
+  /// Street address as the hospital writes it.
+  address            String       @default("")
+  area               String       @default("")
+  city               String       @default("")
+  state              String?
+  latitude           Float?
+  longitude          Float?
+  phone              String?
+  emergencyPhone     String?
+  email              String?
+  website            String?
+  /// Facility registration number (state ministry of health), if any.
+  registrationNumber String?
+  /// Keys from lib/hospitals/accessibility.ts.
+  accessibility      String[]
+  reviewNote         String?
+  submittedAt        DateTime?
+  verifiedAt         DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([status, state])
+}
+
+/// A bookable department or service with weekly availability (Lagos time).
+model HospitalDepartment {
+  id             String                @id @default(uuid())
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String                @default("")
+  active         Boolean               @default(true)
+  slotMinutes    Int                   @default(30)
+  /// Appointments that can share one slot.
+  capacity       Int                   @default(1)
+  /// [{ day: 0-6, start: "09:00", end: "17:00" }] as in lib/nutritionists/availability.ts.
+  availability   Json                  @default("[]")
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  appointments   HospitalAppointment[]
+
+  @@index([organizationId])
+}
+
+enum HospitalAppointmentStatus {
+  booked
+  canceled
+  attended
+  no_show
+}
+
+model HospitalAppointment {
+  id             String                    @id @default(uuid())
+  organizationId String
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  departmentId   String
+  department     HospitalDepartment        @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        User                      @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  startsAt       DateTime
+  minutes        Int
+  status         HospitalAppointmentStatus @default(booked)
+  /// Communication and access needs the patient chose (lib/hospitals/accessibility.ts NEEDS).
+  needs          String[]
+  /// What the patient chose to share (max 500 characters).
+  note           String?
+  reminderSentAt DateTime?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  conversation   AccessConversation?
+
+  @@index([organizationId, startsAt])
+  @@index([patientId, startsAt])
+  @@index([status, startsAt])
+}
+
+enum AccessConversationStatus {
+  open
+  escalated
+  closed
+}
+
+/// A patient's conversation with a hospital through the NE accessibility
+/// agent. Deleted 90 days after it is closed (deleteAfter).
+model AccessConversation {
+  id             String                   @id @default(uuid())
+  organizationId String
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        User                     @relation("PatientConversations", fields: [patientId], references: [id], onDelete: Cascade)
+  appointmentId  String?                  @unique
+  appointment    HospitalAppointment?     @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  status         AccessConversationStatus @default(open)
+  /// From the agent: general, appointment, directions, clinical, urgent.
+  category       String                   @default("general")
+  departmentId   String?
+  /// The agent's last summary for staff (no diagnosis).
+  summary        String?
+  needsDoctor    Boolean                  @default(false)
+  urgent         Boolean                  @default(false)
+  /// The staff member who took the conversation.
+  assignedUserId String?
+  closedAt       DateTime?
+  deleteAfter    DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  messages       AccessMessage[]
+
+  @@index([organizationId, status, updatedAt])
+  @@index([patientId, updatedAt])
+  @@index([deleteAfter])
+}
+
+model AccessMessage {
+  id             String             @id @default(uuid())
+  conversationId String
+  conversation   AccessConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// patient, agent or staff.
+  sender         String
+  senderUserId   String?
+  text           String
+  /// How the patient entered it: text or voice.
+  inputMode      String             @default("text")
+  createdAt      DateTime           @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+/// OpenStreetMap geocoding results, cached so each place is looked up once (ADR-068).
+model GeocodeCache {
+  query     String   @id
+  latitude  Float?
+  longitude Float?
+  label     String?
+  createdAt DateTime @default(now())
+}
+
+enum WhatsAppConsent {
+  opted_in
+  opted_out
+}
+
+enum WhatsAppDirection {
+  inbound
+  outbound
+}
+
+/// Someone who has messaged the WhatsApp number (ADR-087). The phone number is
+/// never stored: only an HMAC of it, enough to recognise the same person and
+/// continue their conversation. Replies use the number from each incoming
+/// message.
+model WhatsAppContact {
+  id             String            @id @default(uuid())
+  waIdHash       String            @unique
+  consent        WhatsAppConsent   @default(opted_in)
+  /// The chat conversation (Conversation.id) this person is in, if still kept.
+  conversationId String?
+  firstSeenAt    DateTime          @default(now())
+  lastInboundAt  DateTime          @default(now())
+  optedOutAt     DateTime?
+  messages       WhatsAppMessage[]
+}
+
+/// Delivery tracking for WhatsApp messages: IDs and statuses only, never text.
+model WhatsAppMessage {
+  /// Meta's message ID (wamid).
+  id        String            @id
+  contactId String
+  contact   WhatsAppContact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  direction WhatsAppDirection
+  /// received, sent, delivered, read or failed.
+  status    String
+  /// Meta's error code when status is failed.
+  errorCode Int?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([contactId, createdAt])
+}

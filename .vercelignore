@@ -1,0 +1,14 @@
+# Files the Vercel CLI must never upload. Vercel installs and builds from
+# source; local builds, dependencies and secrets stay on this machine.
+.next
+n-equals/.next
+node_modules
+n-equals/node_modules
+lib/generated
+coverage
+.playwright-mcp
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+demo-output

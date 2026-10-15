@@ -1,0 +1,550 @@
+{
+  "_comment": "Curated food list. Nutrient values are NOT written here: build_food_seed.py copies them from the FAO/INFOODS WAFCT 2019 datasheet by code, and serving gram weights from USDA SR Legacy food_portion by (fdcId, amount, modifier). 'label' is our plain-language name for that USDA portion.",
+  "foods": [
+    {
+      "id": "orange",
+      "name": "Orange",
+      "category": "fruit",
+      "aliases": ["orange", "oranges"],
+      "allergens": [],
+      "wafct": "05_016",
+      "serving": {
+        "fdcId": "169097",
+        "amount": "1",
+        "modifier": "fruit (2-5/8\" dia)",
+        "label": "1 medium orange"
+      }
+    },
+    {
+      "id": "banana",
+      "name": "Banana, ripe",
+      "category": "fruit",
+      "aliases": ["banana", "bananas", "ogede wewe"],
+      "allergens": [],
+      "wafct": "05_028",
+      "serving": {
+        "fdcId": "173944",
+        "amount": "1",
+        "modifier": "medium (7\" to 7-7/8\" long)",
+        "label": "1 medium banana"
+      }
+    },
+    {
+      "id": "apple",
+      "name": "Apple, with skin",
+      "category": "fruit",
+      "aliases": ["apple", "apples"],
+      "allergens": [],
+      "wafct": "05_026",
+      "serving": {
+        "fdcId": "171688",
+        "amount": "1",
+        "modifier": "medium (3\" dia)",
+        "label": "1 medium apple"
+      }
+    },
+    {
+      "id": "mango",
+      "name": "Mango, ripe",
+      "category": "fruit",
+      "aliases": ["mango", "mangoes", "mangos"],
+      "allergens": [],
+      "wafct": "05_015",
+      "serving": {
+        "fdcId": "169910",
+        "amount": "1",
+        "modifier": "cup pieces",
+        "label": "1 cup, sliced"
+      }
+    },
+    {
+      "id": "pawpaw",
+      "name": "Pawpaw (papaya)",
+      "category": "fruit",
+      "aliases": ["pawpaw", "paw paw", "papaya", "papayas", "ibepe", "gwanda"],
+      "allergens": [],
+      "wafct": "05_017",
+      "serving": {
+        "fdcId": "169926",
+        "amount": "1",
+        "modifier": "cup 1\" pieces",
+        "label": "1 cup, cubed"
+      }
+    },
+    {
+      "id": "watermelon",
+      "name": "Watermelon",
+      "category": "fruit",
+      "aliases": ["watermelon", "water melon"],
+      "allergens": [],
+      "wafct": "05_022",
+      "serving": {
+        "fdcId": "167765",
+        "amount": "1",
+        "modifier": "cup, diced",
+        "label": "1 cup, diced"
+      }
+    },
+    {
+      "id": "pineapple",
+      "name": "Pineapple",
+      "category": "fruit",
+      "aliases": ["pineapple", "pineapples"],
+      "allergens": [],
+      "wafct": "05_018",
+      "serving": {
+        "fdcId": "169124",
+        "amount": "1",
+        "modifier": "cup, chunks",
+        "label": "1 cup, chunks"
+      }
+    },
+    {
+      "id": "guava",
+      "name": "Guava",
+      "category": "fruit",
+      "aliases": ["guava", "guavas"],
+      "allergens": [],
+      "wafct": "05_010",
+      "serving": {
+        "fdcId": "173044",
+        "amount": "1",
+        "modifier": "fruit, without refuse",
+        "label": "1 guava"
+      }
+    },
+    {
+      "id": "avocado",
+      "name": "Avocado",
+      "category": "fruit",
+      "aliases": ["avocado", "avocados", "avocado pear"],
+      "allergens": [],
+      "wafct": "05_002",
+      "serving": {
+        "fdcId": "171705",
+        "amount": "1",
+        "modifier": "cup, cubes",
+        "label": "1 cup, cubed"
+      }
+    },
+
+    {
+      "id": "tomato",
+      "name": "Tomato, ripe",
+      "category": "vegetable",
+      "aliases": ["tomato", "tomatoes", "fresh tomatoes"],
+      "allergens": [],
+      "wafct": "04_021",
+      "serving": {
+        "fdcId": "170457",
+        "amount": "1",
+        "modifier": "medium whole (2-3/5\" dia)",
+        "label": "1 medium tomato"
+      }
+    },
+    {
+      "id": "spinach",
+      "name": "Spinach, raw",
+      "category": "vegetable",
+      "aliases": ["spinach"],
+      "allergens": [],
+      "wafct": "04_057",
+      "serving": { "fdcId": "168462", "amount": "1", "modifier": "cup", "label": "1 cup, raw" }
+    },
+    {
+      "id": "amaranth-leaves",
+      "name": "Amaranth leaves (efo tete), raw",
+      "category": "vegetable",
+      "aliases": ["amaranth", "amaranth leaves", "efo tete", "tete", "green amaranth"],
+      "allergens": [],
+      "wafct": "04_023",
+      "serving": { "fdcId": "168385", "amount": "1", "modifier": "cup", "label": "1 cup, raw" }
+    },
+    {
+      "id": "bitter-leaf",
+      "name": "Bitter leaf, raw",
+      "category": "vegetable",
+      "aliases": ["bitter leaf", "bitterleaf", "onugbu", "ewuro", "shuwaka"],
+      "allergens": [],
+      "wafct": "04_022",
+      "serving": null
+    },
+    {
+      "id": "okra",
+      "name": "Okra, fresh",
+      "category": "vegetable",
+      "aliases": ["okra", "okro", "ila", "kubewa"],
+      "allergens": [],
+      "wafct": "04_017",
+      "serving": { "fdcId": "169260", "amount": "1", "modifier": "cup", "label": "1 cup" }
+    },
+    {
+      "id": "onion",
+      "name": "Onion",
+      "category": "vegetable",
+      "aliases": ["onion", "onions", "alubosa"],
+      "allergens": [],
+      "wafct": "04_018",
+      "serving": {
+        "fdcId": "170000",
+        "amount": "1",
+        "modifier": "cup, chopped",
+        "label": "1 cup, chopped"
+      }
+    },
+    {
+      "id": "chilli-pepper",
+      "name": "Chilli pepper, fresh",
+      "category": "vegetable",
+      "aliases": [
+        "chilli pepper",
+        "chili pepper",
+        "chilli",
+        "chili",
+        "hot pepper",
+        "ata rodo",
+        "rodo"
+      ],
+      "allergens": [],
+      "wafct": "04_046",
+      "serving": { "fdcId": "170106", "amount": "1", "modifier": "pepper", "label": "1 pepper" }
+    },
+
+    {
+      "id": "rice-white-boiled",
+      "name": "Rice, white, boiled",
+      "category": "grain",
+      "aliases": ["rice", "white rice", "boiled rice", "cooked rice", "plain rice"],
+      "allergens": [],
+      "wafct": "01_135",
+      "serving": { "fdcId": "168935", "amount": "1", "modifier": "cup", "label": "1 cup, cooked" }
+    },
+    {
+      "id": "rice-white-raw",
+      "name": "Rice, white, uncooked",
+      "category": "grain",
+      "aliases": ["uncooked rice", "raw rice", "dry rice"],
+      "allergens": [],
+      "wafct": "01_037",
+      "serving": { "fdcId": "169756", "amount": "1", "modifier": "cup", "label": "1 cup, uncooked" }
+    },
+    {
+      "id": "bread-white",
+      "name": "Bread, white",
+      "category": "grain",
+      "aliases": ["bread", "white bread", "agege bread", "sliced bread"],
+      "allergens": ["wheat"],
+      "wafct": "01_046",
+      "serving": {
+        "fdcId": "174924",
+        "amount": "1",
+        "modifier": "slice, large",
+        "label": "1 large slice"
+      }
+    },
+    {
+      "id": "ogi",
+      "name": "Ogi (pap), cooked",
+      "category": "grain",
+      "aliases": ["ogi", "pap", "akamu", "corn pap"],
+      "allergens": [],
+      "wafct": "01_100",
+      "serving": null
+    },
+
+    {
+      "id": "beans-boiled",
+      "name": "Beans (cowpea), boiled",
+      "category": "legume",
+      "aliases": [
+        "beans",
+        "cooked beans",
+        "boiled beans",
+        "cowpea",
+        "cowpeas",
+        "black-eyed beans",
+        "black eyed beans",
+        "brown beans",
+        "honey beans",
+        "ewa"
+      ],
+      "allergens": [],
+      "wafct": "03_007",
+      "serving": { "fdcId": "173759", "amount": "1", "modifier": "cup", "label": "1 cup, cooked" }
+    },
+    {
+      "id": "beans-dry",
+      "name": "Beans (cowpea), dry",
+      "category": "legume",
+      "aliases": ["dry beans", "raw beans", "uncooked beans"],
+      "allergens": [],
+      "wafct": "03_004",
+      "serving": { "fdcId": "173758", "amount": "1", "modifier": "cup", "label": "1 cup, dry" }
+    },
+    {
+      "id": "soya-bean",
+      "name": "Soya bean, dry",
+      "category": "legume",
+      "aliases": ["soya bean", "soya beans", "soybean", "soybeans", "soya", "soy"],
+      "allergens": ["soy"],
+      "wafct": "03_008",
+      "serving": { "fdcId": "174270", "amount": "1", "modifier": "cup", "label": "1 cup, dry" }
+    },
+    {
+      "id": "groundnut",
+      "name": "Groundnut (peanut), raw",
+      "category": "nut_seed",
+      "aliases": ["groundnut", "groundnuts", "peanut", "peanuts", "epa", "gyada", "ahuekere"],
+      "allergens": ["peanut"],
+      "wafct": "06_010",
+      "serving": {
+        "fdcId": "172430",
+        "amount": "1",
+        "modifier": "oz",
+        "label": "1 oz (a small handful)"
+      }
+    },
+    {
+      "id": "egusi",
+      "name": "Egusi (melon seed), dried",
+      "category": "nut_seed",
+      "aliases": ["egusi", "melon seed", "melon seeds", "agushi"],
+      "allergens": [],
+      "wafct": "06_013",
+      "serving": null
+    },
+
+    {
+      "id": "gari",
+      "name": "Gari, white",
+      "category": "tuber",
+      "aliases": ["gari", "garri", "white gari", "white garri"],
+      "allergens": [],
+      "wafct": "02_039",
+      "serving": null
+    },
+    {
+      "id": "cassava",
+      "name": "Cassava, raw",
+      "category": "tuber",
+      "aliases": ["cassava", "cassava root", "ege", "rogo"],
+      "allergens": [],
+      "wafct": "02_001",
+      "serving": { "fdcId": "169985", "amount": "1", "modifier": "cup", "label": "1 cup" }
+    },
+    {
+      "id": "yam-boiled",
+      "name": "Yam, boiled",
+      "category": "tuber",
+      "aliases": ["yam", "boiled yam", "cooked yam", "isu", "doya"],
+      "allergens": [],
+      "wafct": "02_035",
+      "serving": {
+        "fdcId": "170072",
+        "amount": "1",
+        "modifier": "cup, cubes",
+        "label": "1 cup, cubed"
+      }
+    },
+    {
+      "id": "yam-raw",
+      "name": "Yam, raw",
+      "category": "tuber",
+      "aliases": ["raw yam", "uncooked yam"],
+      "allergens": [],
+      "wafct": "02_034",
+      "serving": {
+        "fdcId": "170071",
+        "amount": "1",
+        "modifier": "cup, cubes",
+        "label": "1 cup, cubed"
+      }
+    },
+    {
+      "id": "sweet-potato",
+      "name": "Sweet potato, pale flesh, raw",
+      "category": "tuber",
+      "aliases": ["sweet potato", "sweet potatoes", "dankali"],
+      "allergens": [],
+      "wafct": "02_022",
+      "serving": {
+        "fdcId": "168482",
+        "amount": "1",
+        "modifier": "sweetpotato, 5\" long",
+        "label": "1 sweet potato (5 in long)"
+      }
+    },
+    {
+      "id": "plantain-ripe",
+      "name": "Plantain, ripe, raw",
+      "category": "tuber",
+      "aliases": ["plantain", "plantains", "ripe plantain", "ogede agbagba"],
+      "allergens": [],
+      "wafct": "02_042",
+      "serving": { "fdcId": "169130", "amount": "1", "modifier": "plantain", "label": "1 plantain" }
+    },
+    {
+      "id": "plantain-unripe",
+      "name": "Plantain, unripe, raw",
+      "category": "tuber",
+      "aliases": ["unripe plantain", "green plantain"],
+      "allergens": [],
+      "wafct": "02_046",
+      "serving": { "fdcId": "168215", "amount": "1", "modifier": "plantain", "label": "1 plantain" }
+    },
+    {
+      "id": "dodo",
+      "name": "Plantain, fried (dodo)",
+      "category": "tuber",
+      "aliases": ["dodo", "fried plantain"],
+      "allergens": [],
+      "wafct": "02_084",
+      "serving": { "fdcId": "168200", "amount": "1", "modifier": "cup", "label": "1 cup" }
+    },
+
+    {
+      "id": "egg",
+      "name": "Egg, chicken, raw",
+      "category": "egg",
+      "aliases": ["egg", "eggs", "chicken egg", "eyin", "kwai"],
+      "allergens": ["egg"],
+      "wafct": "08_001",
+      "serving": { "fdcId": "171287", "amount": "1", "modifier": "medium", "label": "1 medium egg" }
+    },
+
+    {
+      "id": "chicken-breast",
+      "name": "Chicken breast, no skin, raw",
+      "category": "meat",
+      "aliases": ["chicken", "chicken breast", "adie", "kaza"],
+      "allergens": [],
+      "wafct": "07_033",
+      "serving": { "fdcId": "171077", "amount": "4", "modifier": "oz", "label": "4 oz" }
+    },
+    {
+      "id": "chicken-dark",
+      "name": "Chicken, dark meat, no skin, raw",
+      "category": "meat",
+      "aliases": ["chicken thigh", "chicken drumstick", "dark meat chicken"],
+      "allergens": [],
+      "wafct": "07_003",
+      "serving": null
+    },
+    {
+      "id": "beef-lean",
+      "name": "Beef, lean, raw",
+      "category": "meat",
+      "aliases": ["beef", "lean beef", "eran malu"],
+      "allergens": [],
+      "wafct": "07_009",
+      "serving": null
+    },
+    {
+      "id": "goat-meat",
+      "name": "Goat meat, lean, raw",
+      "category": "meat",
+      "aliases": ["goat meat", "goat", "eran ewure"],
+      "allergens": [],
+      "wafct": "07_069",
+      "serving": null
+    },
+
+    {
+      "id": "sardine-canned",
+      "name": "Sardines, canned in oil, drained",
+      "category": "fish",
+      "aliases": ["sardine", "sardines", "tinned sardine", "canned sardine", "canned sardines"],
+      "allergens": ["fish"],
+      "wafct": "09_037",
+      "serving": {
+        "fdcId": "175139",
+        "amount": "1",
+        "modifier": "can (3.75 oz)",
+        "label": "1 small can (drained)"
+      }
+    },
+    {
+      "id": "mackerel",
+      "name": "Mackerel (titus), raw",
+      "category": "fish",
+      "aliases": ["mackerel", "titus", "titus fish"],
+      "allergens": ["fish"],
+      "wafct": "09_003",
+      "serving": { "fdcId": "175119", "amount": "1", "modifier": "fillet", "label": "1 fillet" }
+    },
+    {
+      "id": "tilapia",
+      "name": "Tilapia, raw",
+      "category": "fish",
+      "aliases": ["tilapia"],
+      "allergens": ["fish"],
+      "wafct": "09_041",
+      "serving": { "fdcId": "175176", "amount": "1", "modifier": "fillet", "label": "1 fillet" }
+    },
+    {
+      "id": "catfish",
+      "name": "Catfish, raw",
+      "category": "fish",
+      "aliases": ["catfish", "eja aro"],
+      "allergens": ["fish"],
+      "wafct": "09_018",
+      "serving": { "fdcId": "174186", "amount": "1", "modifier": "fillet", "label": "1 fillet" }
+    },
+    {
+      "id": "crayfish",
+      "name": "Crayfish (dried shrimp)",
+      "category": "fish",
+      "aliases": ["crayfish", "dried crayfish", "dried shrimp", "ede"],
+      "allergens": ["crustacean"],
+      "wafct": "09_057",
+      "serving": null
+    },
+
+    {
+      "id": "milk-whole",
+      "name": "Milk, whole",
+      "category": "dairy",
+      "aliases": ["milk", "whole milk", "fresh milk", "cow milk"],
+      "allergens": ["milk"],
+      "wafct": "10_001",
+      "serving": { "fdcId": "171265", "amount": "1", "modifier": "cup", "label": "1 cup" }
+    },
+    {
+      "id": "milk-evaporated",
+      "name": "Milk, evaporated",
+      "category": "dairy",
+      "aliases": ["evaporated milk", "tin milk", "tinned milk", "canned milk"],
+      "allergens": ["milk"],
+      "wafct": "10_016",
+      "serving": { "fdcId": "171276", "amount": "0.5", "modifier": "cup", "label": "1/2 cup" }
+    },
+    {
+      "id": "milk-powder",
+      "name": "Milk powder, whole",
+      "category": "dairy",
+      "aliases": ["powdered milk", "milk powder", "powder milk"],
+      "allergens": ["milk"],
+      "wafct": "10_002",
+      "serving": { "fdcId": "173454", "amount": "0.25", "modifier": "cup", "label": "1/4 cup" }
+    },
+
+    {
+      "id": "palm-oil-red",
+      "name": "Palm oil, red",
+      "category": "oil",
+      "aliases": ["palm oil", "red oil", "red palm oil", "epo pupa"],
+      "allergens": [],
+      "wafct": "11_004",
+      "serving": { "fdcId": "171015", "amount": "1", "modifier": "tbsp", "label": "1 tablespoon" }
+    },
+    {
+      "id": "groundnut-oil",
+      "name": "Groundnut oil",
+      "category": "oil",
+      "aliases": ["groundnut oil", "peanut oil"],
+      "allergens": ["peanut"],
+      "wafct": "11_003",
+      "serving": { "fdcId": "171410", "amount": "1", "modifier": "tbsp", "label": "1 tablespoon" }
+    }
+  ]
+}

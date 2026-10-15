@@ -1,0 +1,94 @@
+/*
+ * Nutraboom Equals design tokens, shared by the main app and the n-equals
+ * admin portal (ADR-060, brand refresh ADR-070). Import after "tailwindcss".
+ *
+ * The palette follows the Nutraboom family site (deep teal, garden green,
+ * harvest gold on cream) and the Equals logo (green and yellow).
+ */
+
+:root {
+  --surface: #ffffff;
+  --canvas: #fefae0;
+  --subtle: #f5edd0;
+  --ink: #264653;
+  --muted: #4d626b;
+  --line: #e6ddbb;
+  --brand: #2d6a4f;
+  --brand-strong: #1f4e3a;
+  --brand-soft: #e3f1e8;
+  /* Brand colour for text on canvas/surface; fills use --brand. */
+  --brand-text: #2d6a4f;
+  /* Harvest gold: highlights, eyebrow labels, the logo's sun. Never text on cream. */
+  --gold: #e9c46a;
+  --gold-soft: #fbf1d3;
+  --gold-text: #7a5a0c;
+  --accent: #f4a261;
+  /* The deep teal bands: footer, call-to-action panels. */
+  --deep: #264653;
+  --deep-ink: #fefae0;
+  --focus: #264653;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+  /* Single-series chart fill (n-equals analytics); validated against --surface. */
+  --chart: #2b7a52;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #16272d;
+    --canvas: #0f1d22;
+    --subtle: #1e333a;
+    --ink: #f4f0dc;
+    --muted: #a9bab6;
+    --line: #2c444b;
+    --brand: #2d6a4f;
+    --brand-strong: #3b7f60;
+    --brand-text: #74c69d;
+    --brand-soft: #1c3a2e;
+    --gold: #e9c46a;
+    --gold-soft: #3a3320;
+    --gold-text: #e9c46a;
+    --accent: #f4a261;
+    --deep: #0b171b;
+    --deep-ink: #f4f0dc;
+    --focus: #e9c46a;
+    --danger: #f97066;
+    --danger-soft: #3a1714;
+    --chart: #52a97c;
+  }
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-canvas: var(--canvas);
+  --color-subtle: var(--subtle);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-text: var(--brand-text);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-text: var(--gold-text);
+  --color-accent: var(--accent);
+  --color-deep: var(--deep);
+  --color-deep-ink: var(--deep-ink);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-chart: var(--chart);
+  /* DM Sans and Playfair Display where loaded (main app); system fonts otherwise (n-equals, offline builds). */
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-playfair), Georgia, "Times New Roman", serif;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}

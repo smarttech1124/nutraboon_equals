@@ -1,0 +1,67 @@
+# Checks every push and pull request (docs/project_status.md, "CI pipeline").
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: nutrichat_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Tests never call a real AI provider; the build needs no secrets.
+      AI_PROVIDER: mock
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/nutrichat_test
+      # Its name contains "test", so the DB integration suites run against it.
+      DATABASE_URL_TEST: postgresql://ci:ci@localhost:5432/nutrichat_test
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # postinstall runs `prisma generate`.
+      - run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Tests (unit, integration, UI, safety, PostgreSQL)
+        run: npm test
+
+      - name: Production build
+        run: npm run build

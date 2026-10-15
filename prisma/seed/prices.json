@@ -1,0 +1,335 @@
+{
+  "_generated_by": "scripts/price-data/build_price_seed.py - do not edit by hand",
+  "source": "National Bureau of Statistics (NBS), Selected Food Price Watch",
+  "sourceUrl": "https://microdata.nigerianstat.gov.ng/index.php/catalog/162",
+  "sourceVersion": "Selected Food Price Watch, 2026-05 (column 'Average of May-26')",
+  "effectiveMonth": "2026-05",
+  "retrievedAt": "2026-10-02",
+  "currency": "NGN",
+  "fileSha256": "d72407cea0ae2456d6309dcec1cb9a19918b2f0f0652dc3e610ee5a9a08e7318",
+  "items": [
+    {
+      "id": "tomatoes-1kg",
+      "name": "Tomatoes",
+      "unitLabel": "1 kg",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["tomato", "tomatoes", "fresh tomatoes"],
+      "unitEvidence": "Report text: \"the average price of Tomatoes 1kg\"",
+      "nbsLabel": "Tomatoes, fresh",
+      "estimates": {
+        "national": 1560.56,
+        "north_central": 1451.25,
+        "north_east": 1450.2,
+        "north_west": 1182.39,
+        "south_east": 1838.4,
+        "south_south": 1821.6,
+        "south_west": 1747.05
+      }
+    },
+    {
+      "id": "beans-brown-1kg",
+      "name": "Brown beans",
+      "unitLabel": "1 kg",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["beans", "brown beans", "honey beans", "oloyin", "ewa"],
+      "unitEvidence": "Report text: \"the average price of bean Brown (1kg)\"",
+      "nbsLabel": "Beans Brown",
+      "estimates": {
+        "national": 1344.93,
+        "north_central": 1248.52,
+        "north_east": 876.46,
+        "north_west": 897.2,
+        "south_east": 1625.5,
+        "south_south": 1768.66,
+        "south_west": 1790.71
+      }
+    },
+    {
+      "id": "garri-white-1kg",
+      "name": "White garri",
+      "unitLabel": "1 kg",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["garri", "gari", "white garri", "white gari"],
+      "unitEvidence": "Report text: \"Garri white sold loose (1kg)\"",
+      "nbsLabel": "Garri white",
+      "estimates": {
+        "national": 813.24,
+        "north_central": 676.21,
+        "north_east": 738.83,
+        "north_west": 797.6,
+        "south_east": 947.08,
+        "south_south": 944.01,
+        "south_west": 823.46
+      }
+    },
+    {
+      "id": "onions-1kg",
+      "name": "Onions",
+      "unitLabel": "1 kg",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["onion", "onions", "alubosa"],
+      "unitEvidence": "Report text: \"onion Bulb (1kg)\"",
+      "nbsLabel": "Onions, fresh",
+      "estimates": {
+        "national": 1180.01,
+        "north_central": 931.15,
+        "north_east": 1125.35,
+        "north_west": 1014.83,
+        "south_east": 1755.96,
+        "south_south": 1274.13,
+        "south_west": 1143.64
+      }
+    },
+    {
+      "id": "ginger-1kg",
+      "name": "Ginger",
+      "unitLabel": "1 kg",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["ginger"],
+      "unitEvidence": "Report text: \"Ginger Fresh (1kg)\"",
+      "nbsLabel": "Ginger, fresh",
+      "estimates": {
+        "national": 5906.82,
+        "north_central": 5684.74,
+        "north_east": 4495.29,
+        "north_west": 5540.01,
+        "south_east": 6566.13,
+        "south_south": 6392.91,
+        "south_west": 6969.86
+      }
+    },
+    {
+      "id": "eggs-crate-30",
+      "name": "Eggs",
+      "unitLabel": "crate of 30",
+      "unitQuantity": 30,
+      "unitMeasure": "piece",
+      "aliases": ["egg", "eggs", "crate of eggs", "agric eggs"],
+      "unitEvidence": "Item label: \"(a Crate of 30 pieces)\"",
+      "nbsLabel": "Agric hen eggs, (a Crate of 30 pieces)",
+      "estimates": {
+        "national": 6149.18,
+        "north_central": 5989.73,
+        "north_east": 6388.24,
+        "north_west": 5932.19,
+        "south_east": 6549.86,
+        "south_south": 6123.5,
+        "south_west": 6041.07
+      }
+    },
+    {
+      "id": "palm-oil-75cl",
+      "name": "Palm oil",
+      "unitLabel": "75 cl bottle",
+      "unitQuantity": 750,
+      "unitMeasure": "ml",
+      "aliases": ["palm oil", "red oil", "red palm oil", "epo pupa"],
+      "unitEvidence": "Item label: \"75cl\"",
+      "nbsLabel": "Palm oil, 75cl",
+      "estimates": {
+        "national": 2396.62,
+        "north_central": 2457.3,
+        "north_east": 2288.33,
+        "north_west": 2416.1,
+        "south_east": 2241.39,
+        "south_south": 2365.5,
+        "south_west": 2571.85
+      }
+    },
+    {
+      "id": "groundnut-oil-75cl",
+      "name": "Groundnut oil",
+      "unitLabel": "75 cl bottle",
+      "unitQuantity": 750,
+      "unitMeasure": "ml",
+      "aliases": ["groundnut oil", "peanut oil"],
+      "unitEvidence": "Item label: \"75cl\"",
+      "nbsLabel": "Groundnut oil, 75cl",
+      "estimates": {
+        "national": 3113.05,
+        "north_central": 3018.15,
+        "north_east": 2904.9,
+        "north_west": 3204.25,
+        "south_east": 2568.53,
+        "south_south": 3691.29,
+        "south_west": 3201.02
+      }
+    },
+    {
+      "id": "vegetable-oil-75cl",
+      "name": "Vegetable oil",
+      "unitLabel": "75 cl bottle",
+      "unitQuantity": 750,
+      "unitMeasure": "ml",
+      "aliases": ["vegetable oil", "veg oil", "cooking oil"],
+      "unitEvidence": "Item label: \"75cl\"",
+      "nbsLabel": "Vegetable Oil, 75cl",
+      "estimates": {
+        "national": 3263.5,
+        "north_central": 3151.15,
+        "north_east": 3211.45,
+        "north_west": 2768.46,
+        "south_east": 3924.67,
+        "south_south": 3706.18,
+        "south_west": 3030.5
+      }
+    },
+    {
+      "id": "bread-sliced-450g",
+      "name": "Sliced bread",
+      "unitLabel": "450 g loaf",
+      "unitQuantity": 450,
+      "unitMeasure": "g",
+      "aliases": ["bread", "sliced bread", "loaf of bread"],
+      "unitEvidence": "Item label: \"450g\"",
+      "nbsLabel": "Bread (sliced), 450g",
+      "estimates": {
+        "national": 1687.18,
+        "north_central": 1726.83,
+        "north_east": 1485.7,
+        "north_west": 1773.54,
+        "south_east": 1659.35,
+        "south_south": 1706.83,
+        "south_west": 1745.21
+      }
+    },
+    {
+      "id": "bread-unsliced-450g",
+      "name": "Unsliced bread",
+      "unitLabel": "450 g loaf",
+      "unitQuantity": 450,
+      "unitMeasure": "g",
+      "aliases": ["unsliced bread", "agege bread"],
+      "unitEvidence": "Item label: \"450g\"",
+      "nbsLabel": "Bread (unsliced), 450g",
+      "estimates": {
+        "national": 1609.3,
+        "north_central": 1632.27,
+        "north_east": 1497.15,
+        "north_west": 1771.81,
+        "south_east": 1644.27,
+        "south_south": 1674.98,
+        "south_west": 1410.21
+      }
+    },
+    {
+      "id": "semovita-1kg",
+      "name": "Semovita",
+      "unitLabel": "1 kg pack",
+      "unitQuantity": 1000,
+      "unitMeasure": "g",
+      "aliases": ["semovita", "semolina"],
+      "unitEvidence": "Item label: \"(1kg)\"",
+      "nbsLabel": "Semovita, Prepacked (1kg)",
+      "estimates": {
+        "national": 2166.71,
+        "north_central": 2139.7,
+        "north_east": 2355.0,
+        "north_west": 1969.17,
+        "south_east": 2214.44,
+        "south_south": 2506.13,
+        "south_west": 1861.17
+      }
+    },
+    {
+      "id": "wheat-flour-2kg",
+      "name": "Wheat flour",
+      "unitLabel": "2 kg pack",
+      "unitQuantity": 2000,
+      "unitMeasure": "g",
+      "aliases": ["flour", "wheat flour"],
+      "unitEvidence": "Item label: \"(2kg)\"",
+      "nbsLabel": "Wheat Flour, Prepacked (2kg)",
+      "estimates": {
+        "national": 3672.94,
+        "north_central": 3988.66,
+        "north_east": 3462.56,
+        "north_west": 3591.88,
+        "south_east": 3578.3,
+        "south_south": 3747.16,
+        "south_west": 3614.18
+      }
+    },
+    {
+      "id": "evaporated-milk-150g",
+      "name": "Evaporated milk (Peak)",
+      "unitLabel": "150 g tin",
+      "unitQuantity": 150,
+      "unitMeasure": "g",
+      "aliases": ["evaporated milk", "tin milk", "tinned milk", "peak milk"],
+      "unitEvidence": "Item label: \"150g\"",
+      "nbsLabel": "Tin Milk-Evaporated, Peak Milk, 150g",
+      "estimates": {
+        "national": 1057.97,
+        "north_central": 1055.29,
+        "north_east": 1126.96,
+        "north_west": 933.53,
+        "south_east": 1049.88,
+        "south_south": 1135.45,
+        "south_west": 1066.55
+      }
+    },
+    {
+      "id": "groundnuts-roasted-75cl",
+      "name": "Roasted groundnuts",
+      "unitLabel": "75 cl bottle",
+      "unitQuantity": 1,
+      "unitMeasure": "piece",
+      "aliases": ["groundnuts", "groundnut", "roasted groundnuts", "peanuts", "epa"],
+      "unitEvidence": "Item label: \"75cl bottle\"",
+      "nbsLabel": "Groundnuts, roasted,75cl bottle",
+      "estimates": {
+        "national": 2600.22,
+        "north_central": 2388.91,
+        "north_east": 2705.49,
+        "north_west": 2706.53,
+        "south_east": 2499.1,
+        "south_south": 2594.53,
+        "south_west": 2707.41
+      }
+    },
+    {
+      "id": "watermelon-medium",
+      "name": "Watermelon",
+      "unitLabel": "1 medium watermelon",
+      "unitQuantity": 1,
+      "unitMeasure": "piece",
+      "aliases": ["watermelon", "water melon"],
+      "unitEvidence": "Item label: \"whole, medium size\"",
+      "nbsLabel": "Watermelon whole, medium size fresh",
+      "estimates": {
+        "national": 2085.61,
+        "north_central": 1919.6,
+        "north_east": 1734.89,
+        "north_west": 1611.3,
+        "south_east": 2514.85,
+        "south_south": 2462.53,
+        "south_west": 2448.72
+      }
+    },
+    {
+      "id": "yam-tuber",
+      "name": "Yam",
+      "unitLabel": "1 tuber (size not specified)",
+      "unitQuantity": 1,
+      "unitMeasure": "piece",
+      "aliases": ["yam", "yams", "yam tuber", "isu", "doya"],
+      "unitEvidence": "Item label: \"Yam Tuber\" (priced per tuber; NBS does not state the size)",
+      "nbsLabel": "Yam Tuber",
+      "estimates": {
+        "national": 2347.09,
+        "north_central": 2119.73,
+        "north_east": 2172.71,
+        "north_west": 2234.32,
+        "south_east": 2540.67,
+        "south_south": 2632.08,
+        "south_west": 2471.97
+      }
+    }
+  ]
+}

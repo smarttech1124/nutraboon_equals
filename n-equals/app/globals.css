@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "../../styles/tokens.css";
+
+/* Shared components live outside this app; let Tailwind see their classes. */
+@source "../../components/ui";

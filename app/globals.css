@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+/*
+ * Home hero animation (ADR-076): chat messages fade up one after another,
+ * once, and the decorative circles drift slowly. Opacity and small movement
+ * only: no flashing, nothing faster than one change every 0.7 s. With
+ * prefers-reduced-motion, everything is shown still and finished.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-msg {
+    animation: hero-msg-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: var(--d, 0s);
+  }
+  .hero-float {
+    animation: hero-float 7s ease-in-out infinite alternate;
+  }
+  .hero-float-slow {
+    animation: hero-float 11s ease-in-out infinite alternate-reverse;
+  }
+}
+
+@keyframes hero-msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hero-float {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(-8px, 10px) scale(1.06);
+  }
+}
