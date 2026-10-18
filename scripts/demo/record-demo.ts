@@ -8,7 +8,6 @@
  *   DEMO_EMAIL / DEMO_PASSWORD              sign in as a dedicated demo member
  *   DEMO_ADMIN_URL / DEMO_ADMIN_EMAIL / DEMO_ADMIN_PASSWORD   n-equals tour (read-only;
  *                                           the password defaults to DEMO_PASSWORD)
- *   DEMO_CHAT=off                           skip the two chat messages
  *   DEMO_HEADED=1                           show the browser while recording
  *   DEMO_BROWSER=chrome|msedge              use an installed browser instead of
  *                                           Playwright's Chromium
@@ -21,6 +20,7 @@
  * conversation that expires like any other) and signing in starts sessions.
  * Use dedicated demo accounts, never a real person's.
  */
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parse } from "dotenv";
@@ -36,6 +36,9 @@ import {
 
 declare global {
   interface Window {
+    /** Set by the recorder: the sentence the voice stand-in "hears" (voice-shim.js). */
+    __demoVoice?: string;
+    __demoSpoken?: { at: number; text: string; lang: string }[];
     __demo?: {
       chapter(title: string, subtitle: string, ms: number): Promise<void>;
       caption(text: string): void;
@@ -58,7 +61,6 @@ const BASE_URL = (env("DEMO_BASE_URL") ?? "https://nutraboom-equals.vercel.app")
 const ADMIN_URL = env("DEMO_ADMIN_URL")?.replace(/\/$/, "");
 /** Multiplies every pause: 0.5 for a quick check, 1.5 for a slower video. */
 const PACE = Number(env("DEMO_PACE") ?? "1") || 1;
-const CHAT = (env("DEMO_CHAT") ?? "on").toLowerCase() !== "off";
 
 const pause = (page: Page, ms: number) => page.waitForTimeout(Math.round(ms * PACE));
 
@@ -92,8 +94,17 @@ async function settle(page: Page): Promise<void> {
   await page.evaluate(() => document.fonts.ready).catch(() => {});
 }
 
+/** Something said aloud in the video, added as sound by demo:polish. */
+export type AudioCue = { at: number; kind: "question" | "reply"; text: string };
+
 class Demo {
   readonly results: StepResult[] = [];
+  readonly cues: AudioCue[] = [];
+
+  /** Notes words spoken at this moment (the spoken question in the voice chapter). */
+  cue(kind: AudioCue["kind"], text: string): void {
+    this.cues.push({ at: Date.now(), kind, text });
+  }
 
   constructor(
     readonly page: Page,
@@ -246,73 +257,264 @@ async function askAssistant(demo: Demo, dialog: Locator, message: string): Promi
   await pause(demo.page, 800);
 }
 
-async function publicTour(demo: Demo): Promise<void> {
+/** The chat dialog, opened (or restored) from the floating launcher if needed. */
+async function openChat(demo: Demo): Promise<Locator> {
+  const page = demo.page;
+  const dialog = page.getByRole("dialog", { name: "Nutraboom Equals" });
+  if (await dialog.isVisible().catch(() => false)) return dialog;
+  const restore = page.getByRole("button", { name: /^Open the chat/ });
+  if (await restore.isVisible().catch(() => false)) await demo.click(restore);
+  else await demo.click(page.getByRole("button", { name: "Ask Nutraboom Equals" }).last());
+  await dialog.waitFor();
+  await pause(page, 700);
+  return dialog;
+}
+
+/** "New chat" in the chat header, confirming the browser's question. */
+async function newChat(demo: Demo, dialog: Locator): Promise<void> {
+  const button = dialog.getByRole("button", { name: "New chat" });
+  if (!(await button.isVisible().catch(() => false))) return;
+  demo.page.once("dialog", (d) => void d.accept());
+  await demo.click(button);
+  await dialog.getByRole("list", { name: "Suggested questions" }).waitFor();
+  await pause(demo.page, 900);
+}
+
+/** Opens Settings in the chat, runs `change`, then goes back to the conversation. */
+async function inSettings(demo: Demo, dialog: Locator, change: () => Promise<void>) {
+  await demo.click(dialog.getByRole("button", { name: "Settings" }));
+  await dialog.getByRole("heading", { name: "Settings" }).waitFor();
+  await pause(demo.page, 600);
+  await change();
+  await pause(demo.page, 700);
+  await demo.click(dialog.getByRole("button", { name: "Back to chat" }));
+  await pause(demo.page, 500);
+}
+
+/**
+ * Scrolls the conversation so the newest reply can be read: its start first,
+ * then down through it at reading pace.
+ */
+async function showLatestReply(demo: Demo, dialog: Locator): Promise<string> {
+  const page = demo.page;
+  const reply = dialog
+    .getByText("Nutraboom Equals said:", { exact: true })
+    .last()
+    .locator("xpath=ancestor::div[contains(@class,'flex')][1]");
+  await reply.evaluate((el) => el.scrollIntoView({ block: "start", behavior: "smooth" }));
+  await pause(page, 900);
+  const text = (await reply.innerText()).replace("Nutraboom Equals said:", "").trim();
+  // About 18 characters a second, at least 4 s and at most 14 s on screen.
+  const readMs = Math.min(14_000, Math.max(4_000, (text.length / 18) * 1000));
+  const scroller = dialog.locator(".overflow-y-auto").first();
+  const steps = 4;
+  for (let i = 0; i < steps; i++) {
+    await pause(page, readMs / steps);
+    await scroller.evaluate((el) =>
+      el.scrollBy({ top: el.clientHeight * 0.45, behavior: "smooth" }),
+    );
+  }
+  await pause(page, 600);
+  return text;
+}
+
+/** Asks a question in the open chat and shows the reply. */
+async function ask(demo: Demo, dialog: Locator, question: string): Promise<string> {
+  await askAssistant(demo, dialog, question);
+  return showLatestReply(demo, dialog);
+}
+
+const CHAT_QUESTIONS = [
+  "Can I give my baby semo at 4 months?",
+  "Can I eat pineapple during pregnancy?",
+  "I heard pineapple is acidic and is not good for pregnant women.",
+  "What food can I cook tonight?",
+  "I have pains when breastfeeding my baby. Why is that?",
+];
+
+const YORUBA_QUESTION = "Ẹ káàsán. Kí ni mo lè sè fún oúnjẹ alẹ́ pẹ̀lú ìrẹsì àti ẹyin?";
+const IGBO_QUESTION = "Ndewo. Gịnị ka m nwere ike isi maka nri abalị site na osikapa na akwa?";
+const VOICE_QUESTION = "What food can I cook tonight with rice and eggs?";
+
+async function featureTour(demo: Demo): Promise<void> {
   const page = demo.page;
 
+  // 1. Home page
   await demo.step("Home page", true, async () => {
     await demo.goto("/");
-    await demo.chapter("Nutraboom Equals", "AI-powered nutrition for Nigeria");
+    await demo.chapter("Nutraboom Equals", "Learn, plan, and get help in your language");
     const heading = page.getByRole("heading", { level: 1 });
     await heading.waitFor();
-    await demo.caption("Learn, plan, and get help in your language, by text or voice.");
+    await demo.caption(
+      "Ask about food, plan meals and budgets, and find trusted help, by text or voice.",
+    );
     await demo.highlight(heading, "The promise");
     await demo.highlight(
       page.getByRole("button", { name: /Ask Nutraboom Equals/ }).first(),
       "Chat with no account",
     );
-    await demo.caption("Below the fold: products, the Meal Planner, nutritionists and hospitals.");
+    await demo.caption("Built for screen readers, keyboards, listening and speaking.");
+    await demo.highlight(
+      page.getByRole("heading", { name: /blind, deaf, or hard of hearing/ }),
+      "Accessible to everyone",
+    );
+    await demo.caption(
+      "Products, the Meal Planner, nutritionists and accessible hospitals in one place.",
+    );
     await demo.scroll(2.5);
     await demo.clearCaption();
     await demo.scrollToTop();
   });
 
-  if (CHAT) {
-    await demo.step("Ask the assistant", true, async () => {
-      await demo.chapter("Ask the assistant", "Real nutrition data, in plain words");
-      await demo.click(page.getByRole("button", { name: /Ask Nutraboom Equals/ }).first());
-      const dialog = page.getByRole("dialog");
-      await dialog.waitFor();
-      await pause(page, 900);
-      await demo.caption("Suggested questions help people start.");
-      await demo.highlight(dialog.getByRole("list", { name: "Suggested questions" }), "Start here");
-      await demo.clearCaption();
-      await askAssistant(demo, dialog, "What's the nutrition in an orange?");
-      await demo.caption(
-        "Values come from the app's food database, not from the AI's memory.",
-        4200,
-      );
-      await demo.clearCaption();
-    });
+  // 2. Chat and AI assistant: five questions in one new conversation
+  await demo.step("Chat and AI assistant", true, async () => {
+    await demo.chapter(
+      "Chat with the assistant",
+      "Careful answers for babies, pregnancy and breastfeeding",
+    );
+    const dialog = await openChat(demo);
+    await demo.click(dialog.getByRole("button", { name: "Expand the chat" }));
+    await newChat(demo, dialog);
+    await demo.caption(
+      "A new conversation. Every reply passes the app's safety checks first.",
+      2600,
+    );
+    await demo.clearCaption();
+    for (const question of CHAT_QUESTIONS) await ask(demo, dialog, question);
+  });
 
-    await demo.step("Plan within a budget", false, async () => {
-      await demo.chapter("Budget planning", "Use what is at home, then shop smart");
-      const dialog = page.getByRole("dialog");
-      await askAssistant(
-        demo,
-        dialog,
-        "I have ₦2,000 to cook dinner for 3 people. I already have rice, palm oil and two eggs.",
+  // 3. Multilingual: Yorùbá, then Igbo, each in a new conversation
+  await demo.step("Yorùbá conversation", false, async () => {
+    await demo.chapter("Your language", "Yorùbá and Igbo replies (beta)");
+    const dialog = await openChat(demo);
+    await demo.caption("Choose the reply language in Settings.");
+    await inSettings(demo, dialog, async () => {
+      await demo.highlight(
+        dialog.getByRole("group", { name: "Response language" }),
+        "Response language",
+        1800,
       );
-      await demo.caption("Equals asks only what it still needs to know.", 2600);
-      await demo.clearCaption();
-      await askAssistant(demo, dialog, "Two adults and a 7-year-old, just tonight's dinner.");
+      await demo.click(dialog.getByRole("radio", { name: /Yorùbá/ }));
+      await dialog.getByText(/translated by AI and not yet checked by native speakers/).waitFor();
       await demo.caption(
-        "The app prices the shopping list from public market data and does the sums.",
-        4200,
+        "Yorùbá and Igbo are in beta: translated by AI, with safety notes kept in English.",
+        3400,
       );
-      const budget = dialog.getByRole("region", { name: "Budget estimate" });
-      if (await budget.count()) await demo.highlight(budget.first(), "Estimated cost and change");
-      await demo.clearCaption();
-      await demo.click(dialog.getByRole("button", { name: "Close chat" }));
-      await pause(page, 600);
     });
-  }
+    await demo.clearCaption();
+    await newChat(demo, dialog);
+    const reply = await ask(demo, dialog, YORUBA_QUESTION);
+    // Yorùbá is written with dotted letters such as ẹ, ọ and ṣ.
+    if (!/[ẹọṣẸỌṢ]/.test(reply)) throw new Error("The reply does not look like Yorùbá");
+  });
 
-  const tourPage = (
+  await demo.step("Igbo conversation", false, async () => {
+    const dialog = await openChat(demo);
+    await demo.caption("Switch to Igbo and start a new conversation.");
+    await inSettings(demo, dialog, async () => {
+      await demo.click(dialog.getByRole("radio", { name: /Igbo/ }));
+    });
+    await demo.clearCaption();
+    await newChat(demo, dialog);
+    const reply = await ask(demo, dialog, IGBO_QUESTION);
+    // Igbo is written with dotted letters such as ị, ọ and ụ.
+    if (!/[ịọụỊỌỤṅ]/.test(reply)) throw new Error("The reply does not look like Igbo");
+    // Back to Nigerian English for the rest of the tour.
+    await inSettings(demo, dialog, async () => {
+      await demo.click(dialog.getByRole("radio", { name: /Nigerian English/ }));
+    });
+  });
+
+  // 4. Sign language (demo mode)
+  await demo.step("Sign language demo", false, async () => {
+    await demo.chapter("Sign language (demo)", "A preview of sign-language responses");
+    const dialog = await openChat(demo);
+    await newChat(demo, dialog);
+    await demo.caption("Turn on sign-language responses in Settings.");
+    await inSettings(demo, dialog, async () => {
+      const toggle = dialog.getByRole("checkbox", { name: /Sign language response/ });
+      await demo.highlight(toggle.locator("xpath=ancestor::label[1]"), "Demo mode", 1800);
+      await demo.click(toggle);
+    });
+    await demo.clearCaption();
+    await askAssistant(demo, dialog, "What are good foods for a one-year-old?");
+    const player = dialog.getByRole("region", { name: /Sign language response/ }).last();
+    await player.getByRole("button", { name: "Replay" }).waitFor({ timeout: 45_000 });
+    await player.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "smooth" }));
+    await pause(page, 800);
+    await demo.caption(
+      "Demo mode shows a sample sign-language video, clearly labelled: it does not translate the reply yet.",
+      4200,
+    );
+    await demo.highlight(player, "Sign language response (demo)", 4000);
+    await demo.caption("Replay it, or see another sample video.", 2200);
+    await demo.click(player.getByRole("button", { name: "Show another demo video" }));
+    await player.getByRole("button", { name: "Replay" }).waitFor({ timeout: 45_000 });
+    await pause(page, 3500);
+    await demo.clearCaption();
+    await inSettings(demo, dialog, async () => {
+      await demo.click(dialog.getByRole("checkbox", { name: /Sign language response/ }));
+    });
+  });
+
+  // 5. Voice: speak a question, hear the reply
+  await demo.step("Voice interaction", false, async () => {
+    await demo.chapter("Speak and listen", "Voice questions and spoken replies");
+    const dialog = await openChat(demo);
+    await newChat(demo, dialog);
+    await demo.caption(
+      "Voice input is simulated for this recording: automated browsers cannot use a microphone. The app's own voice flow does the rest.",
+      4200,
+    );
+    await page.evaluate((s) => (window.__demoVoice = s), VOICE_QUESTION);
+    demo.cue("question", VOICE_QUESTION);
+    await demo.click(dialog.getByRole("button", { name: "Speak your message" }));
+    await dialog
+      .getByText(/Listening/)
+      .first()
+      .waitFor();
+    await demo.caption(`🎤 "${VOICE_QUESTION}"`, 1500);
+    const input = dialog.getByLabel("Message Nutraboom Equals");
+    await page.waitForFunction(
+      (q) => (document.getElementById("chat-input") as HTMLTextAreaElement | null)?.value === q,
+      VOICE_QUESTION,
+      { timeout: 20_000 },
+    );
+    await demo.caption("The words appear in the box to check before sending.", 2400);
+    await demo.highlight(input, "What was heard", 1800);
+    await demo.clearCaption();
+    const replies = dialog.getByText("Nutraboom Equals said:", { exact: true });
+    const before = await replies.count();
+    await demo.click(dialog.getByRole("button", { name: "Send" }));
+    await replies.nth(before).waitFor({ state: "attached", timeout: 60_000 });
+    const stop = dialog.getByRole("button", { name: "Stop reading this reply" });
+    await stop.waitFor({ timeout: 10_000 });
+    await demo.caption(
+      "🔊 A spoken question gets a spoken reply: it is read aloud as it appears.",
+      1000,
+    );
+    await demo.highlight(stop, "Reading aloud", 1500);
+    await showLatestReply(demo, dialog);
+    // Let the reading finish (or stop it after a while) before moving on.
+    await stop.waitFor({ state: "detached", timeout: 45_000 }).catch(async () => {
+      await demo.click(stop);
+    });
+    await demo.clearCaption();
+    // Note what was read aloud now: leaving the page clears the browser's log.
+    const spoken = await page.evaluate(() => window.__demoSpoken ?? []);
+    for (const said of spoken) demo.cues.push({ at: said.at, kind: "reply", text: said.text });
+    await page.evaluate(() => (window.__demoSpoken = []));
+    await demo.click(dialog.getByRole("button", { name: "Close chat" }));
+  });
+
+  // 6. Products, nutritionists, hospitals
+  const directory = (
     name: string,
     urlPath: string,
     title: string,
     subtitle: string,
     caption: string,
+    firstCard: () => Locator,
     label: string,
   ) =>
     demo.step(name, false, async () => {
@@ -320,51 +522,49 @@ async function publicTour(demo: Demo): Promise<void> {
       await demo.chapter(title, subtitle);
       const heading = page.getByRole("heading", { level: 1 }).first();
       await heading.waitFor({ timeout: 10_000 });
+      if (
+        await page
+          .getByText("Coming soon", { exact: false })
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
+        throw new Error(
+          `${urlPath} shows "Coming soon": switch the module on in n-equals Settings`,
+        );
+      }
       await demo.caption(caption);
-      await demo.highlight(heading, label);
+      await demo.highlight(firstCard(), label, 3000);
       await demo.scroll(1.5);
       await demo.clearCaption();
     });
 
-  await tourPage(
-    "Meal Planner",
-    "/planner",
-    "Meal Planner",
-    "Weekly plans with recipes and a priced shopping list",
-    "Plans are built from the family's ages, budget and the food they already have.",
-    "Weekly plans",
-  );
-  await tourPage(
+  await directory(
     "Products",
     "/products",
     "Verified products",
     "Food from reviewed Nigerian businesses",
     "Every product lists its ingredients and allergens, and is reviewed before it appears.",
-    "Product directory",
+    () => page.locator("main a[href^='/products/']").first(),
+    "A verified product",
   );
-  await tourPage(
+  await directory(
     "Nutritionists",
     "/nutritionists",
     "Nutritionists",
     "Professionals whose qualifications are checked",
-    "When someone needs more than general advice, the assistant can suggest a verified nutritionist.",
-    "Verified directory",
+    "Find a verified nutritionist by specialty and state, online or in person.",
+    () => page.locator("main a[href^='/nutritionists/']").first(),
+    "A verified nutritionist",
   );
-  await tourPage(
+  await directory(
     "Hospitals",
     "/hospitals",
     "Accessible hospitals",
     "Book ahead and message by text or voice",
-    "Partner hospitals list departments and access services for deaf, blind and speech-impaired patients.",
-    "Find care near you",
-  );
-  await tourPage(
-    "About",
-    "/about",
-    "About Nutraboom Equals",
-    "Good nutrition advice should be easy to get",
-    "Nutrition facts come from the FAO food composition table for West Africa.",
-    "Our mission",
+    "Search near you and filter by department and access services, such as sign-language interpreters.",
+    () => page.locator("main a[href^='/hospitals/']").first(),
+    "An accessible hospital",
   );
 }
 
@@ -431,6 +631,47 @@ async function adminTour(demo: Demo, base: string, email: string, password: stri
   });
 }
 
+/**
+ * Writes the spoken words as WAV files with their times in the trimmed video
+ * (audio/cues.json), for demo:polish. Windows' built-in voices are used, the
+ * same voices the browser speaks with on Windows. Elsewhere only the cue list
+ * is written.
+ */
+function writeAudioCues(outDir: string, cues: AudioCue[], startedAt: number, trimStart: number) {
+  if (cues.length === 0) return;
+  const dir = path.join(outDir, "audio");
+  mkdirSync(dir, { recursive: true });
+  const list = cues
+    .sort((x, y) => x.at - y.at)
+    .map((c, i) => ({
+      file: `${String(i + 1).padStart(2, "0")}-${c.kind}.wav`,
+      kind: c.kind,
+      startSeconds: Math.max(0, Math.round(((c.at - startedAt) / 1000 - trimStart) * 1000) / 1000),
+      text: c.text,
+    }));
+  writeFileSync(path.join(dir, "cues.json"), JSON.stringify(list, null, 2));
+  if (process.platform !== "win32") return;
+  for (const cue of list) {
+    const textFile = path.join(dir, cue.file.replace(".wav", ".txt"));
+    writeFileSync(textFile, cue.text, "utf8");
+    // The question in a different voice from the reply, as two people would sound.
+    const voice = cue.kind === "question" ? "Microsoft Zira Desktop" : "Microsoft David Desktop";
+    const quote = (p: string) => p.split("'").join("''");
+    const script = [
+      "Add-Type -AssemblyName System.Speech",
+      "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer",
+      `try { $s.SelectVoice('${voice}') } catch {}`,
+      `$s.SetOutputToWaveFile('${quote(path.join(dir, cue.file))}')`,
+      `$s.Speak([IO.File]::ReadAllText('${quote(textFile)}'))`,
+      "$s.Dispose()",
+    ].join("; ");
+    const result = spawnSync("powershell", ["-NoProfile", "-NonInteractive", "-Command", script], {
+      encoding: "utf8",
+    });
+    if (result.status !== 0) console.warn(`Could not synthesise ${cue.file}`);
+  }
+}
+
 async function launch(): Promise<Browser> {
   const headless = env("DEMO_HEADED") !== "1";
   const channel = env("DEMO_BROWSER");
@@ -470,6 +711,8 @@ async function main(): Promise<void> {
     colorScheme: "light",
   });
   await context.addInitScript({ path: path.join(__dirname, "overlay.js") });
+  // Voice stand-in and speech log, for the voice chapter (see voice-shim.js).
+  await context.addInitScript({ path: path.join(__dirname, "voice-shim.js") });
   const page = await context.newPage();
   const timeline = new Timeline(Date.now());
   page.setDefaultTimeout(15_000);
@@ -479,7 +722,7 @@ async function main(): Promise<void> {
 
   let stopped: string | undefined;
   try {
-    await publicTour(demo);
+    await featureTour(demo);
     const email = env("DEMO_EMAIL");
     const password = env("DEMO_PASSWORD");
     if (email && password) await memberTour(demo, email, password);
@@ -503,11 +746,15 @@ async function main(): Promise<void> {
     const recorded = timeline.finish();
     const trimStart = Math.max(0, (recorded.find((e) => e.kind === "chapter")?.start ?? 0) - 0.3);
     const events = shiftEvents(recorded, trimStart);
+    // What the app read aloud, with when, for the sound track.
+    const spoken = await page.evaluate(() => window.__demoSpoken ?? []).catch(() => []);
+    for (const said of spoken) demo.cues.push({ at: said.at, kind: "reply", text: said.text });
     const video = page.video();
     await context.close();
     await browser.close();
     if (video) renameSync(await video.path(), path.join(outDir, "raw.webm"));
 
+    writeAudioCues(outDir, demo.cues, timeline.startedAt, trimStart);
     const title = "Nutraboom Equals product demo";
     writeFileSync(path.join(outDir, "captions.srt"), toSrt(events));
     writeFileSync(path.join(outDir, "chapters.ffmeta"), toFfmetadata(events, title));

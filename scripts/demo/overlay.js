@@ -61,7 +61,7 @@
     caption(text) {
       const bar = layer(
         "__demo-caption",
-        `left:50%;bottom:40px;transform:translateX(-50%);max-width:1400px;padding:16px 28px;border-radius:16px;background:rgba(38,70,83,0.92);color:${cream};font:500 28px/1.35 ${font};text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.25);transition:opacity 300ms ease;`,
+        `left:40px;bottom:40px;max-width:min(1060px, calc(100vw - 880px));padding:16px 28px;border-radius:16px;background:rgba(38,70,83,0.92);color:${cream};font:500 28px/1.35 ${font};text-align:left;box-shadow:0 8px 30px rgba(0,0,0,0.25);transition:opacity 300ms ease;`,
       );
       bar.textContent = text;
       bar.style.opacity = "1";

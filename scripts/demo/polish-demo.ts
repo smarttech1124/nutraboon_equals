@@ -9,6 +9,8 @@
  *   --no-captions          no captions at all
  *   --narration <file>     mix a voice-over (mp3/wav/m4a) under the video
  *   --music <file>         add background music at low volume (with or without narration)
+ *   --no-voice             leave out the spoken question and the replies read aloud
+ *                          (audio/cues.json from the recording; added by default)
  *
  * Produces demo.mp4 (H.264, 1920×1080, 30 fps, fade in and out, chapter
  * markers from the recording). Needs a full ffmpeg build: set FFMPEG_PATH or
@@ -69,6 +71,7 @@ function main(): void {
   const music = option("--music");
   const soft = flag("--soft-captions");
   const noCaptions = flag("--no-captions");
+  const noVoice = flag("--no-voice");
   const runDir = args[0] ? path.resolve(args[0]) : latestRun();
 
   for (const file of [narration, music]) {
@@ -94,6 +97,18 @@ function main(): void {
   const musicIndex = music ? audioIndex++ : -1;
   if (narration) inputs.push("-i", narration);
   if (music) inputs.push("-stream_loop", "-1", "-i", music);
+  // The words spoken in the voice chapter, placed at the moment they were
+  // spoken (a screen recording has no sound of its own).
+  const cuesFile = path.join(runDir, "audio", "cues.json");
+  const cues = (
+    !noVoice && existsSync(cuesFile)
+      ? (JSON.parse(readFileSync(cuesFile, "utf8")) as { file: string; startSeconds: number }[])
+      : []
+  ).filter((c) => existsSync(path.join(runDir, "audio", c.file)));
+  const cueIndexes = cues.map((c) => {
+    inputs.push("-i", path.join("audio", c.file));
+    return audioIndex++;
+  });
 
   const fadeOut = Math.max(0, duration - 0.8).toFixed(2);
   const video = [
@@ -121,6 +136,22 @@ function main(): void {
   } else if (music) {
     filters.push(`[${musicIndex}:a]volume=0.25,afade=t=out:st=${fadeOut}:d=0.8[a]`);
     audioOut = "[a]";
+  }
+
+  if (cues.length > 0) {
+    const labels = cues.map((c, i) => {
+      const ms = Math.round(c.startSeconds * 1000);
+      filters.push(`[${cueIndexes[i]}:a]aresample=48000,adelay=${ms}:all=1[c${i}]`);
+      return `[c${i}]`;
+    });
+    if (audioOut) {
+      filters.push(`${audioOut.startsWith("[") ? audioOut : `[${audioOut}]`}volume=0.6[bed]`);
+      labels.push("[bed]");
+    }
+    filters.push(
+      `${labels.join("")}amix=inputs=${labels.length}:duration=longest:normalize=0[voice]`,
+    );
+    audioOut = "[voice]";
   }
 
   const softSubs = soft && !noCaptions;

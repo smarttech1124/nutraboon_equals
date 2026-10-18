@@ -18,7 +18,7 @@ export class Timeline {
 
   /** `startedAt` is when the page (and so the video) began, in ms since the epoch. */
   constructor(
-    private readonly startedAt: number,
+    readonly startedAt: number,
     private readonly now: () => number = Date.now,
   ) {}
 
