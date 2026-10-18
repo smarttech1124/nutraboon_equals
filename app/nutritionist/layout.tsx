@@ -1,6 +1,6 @@
-import { SiteShell } from "@/components/site/site-shell";
+import { PortalShell } from "@/components/portal/portal-shell";
 
-/** Frame for the nutritionist portal and its sign-up page (ADR-064). */
+/** The nutritionist portal, its login and its registration (ADR-064), in the portal frame (ADR-089). */
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <SiteShell session>{children}</SiteShell>;
+  return <PortalShell kind="nutritionist">{children}</PortalShell>;
 }

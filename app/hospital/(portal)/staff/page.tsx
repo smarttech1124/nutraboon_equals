@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import { ActionForm } from "@/components/ui/action-form";
-import { Card, CheckboxGroup, Field, SelectField } from "@/components/ui";
+import { Alert, Badge, Card, CheckboxGroup, Field, SelectField } from "@/components/ui";
 import { getEntitlementService } from "@/lib/billing";
 import { getPrisma } from "@/lib/db";
 import { STAFF_ROLE_LABEL, requireHospital, type HospitalRole } from "@/lib/hospitals/server";
+import { isActiveMember } from "@/lib/hospitals/staff";
 import { addStaffAction, removeStaffAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Staff — Hospital portal" };
 
 /** Authorised staff: who is notified for which departments (ADR-068). */
 export default async function StaffPage() {
-  const { user, org } = await requireHospital("/hospital/staff", true);
+  const { user, org, status } = await requireHospital("/hospital/staff", true);
   const prisma = getPrisma();
   const [members, departments, entitlements] = await Promise.all([
     prisma.membership.findMany({
@@ -37,11 +38,12 @@ export default async function StaffPage() {
           {members.map((m) => (
             <li key={m.userId} className="flex flex-wrap items-center justify-between gap-3 py-2">
               <div>
-                <p className="font-semibold text-ink">
-                  {m.user.name}{" "}
+                <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
+                  {m.user.name}
                   <span className="font-normal text-muted">
                     · {STAFF_ROLE_LABEL[m.role as HospitalRole]}
                   </span>
+                  {!isActiveMember(m) && <Badge tone="warning">Pending verification</Badge>}
                 </p>
                 <p className="text-muted">
                   {m.user.email} ·{" "}
@@ -66,11 +68,34 @@ export default async function StaffPage() {
       {members.length < limit && (
         <Card
           title="Add a staff member"
-          description="They need a Nutraboom Equals account with this email."
+          description="Use the email they will sign in with, such as their hospital work email. If they don't have a Nutraboom Equals account yet, we create one and they set their own password."
         >
+          {status !== "verified" && (
+            <div className="mb-4">
+              <Alert tone="info">
+                Your hospital is not verified yet. You can add staff now: their accounts stay
+                pending and become active, with an email to each of them, once we verify your
+                hospital.
+              </Alert>
+            </div>
+          )}
           <ActionForm action={addStaffAction} submitLabel="Add staff member">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field id="email" name="email" type="email" label="Their account email" required />
+              <Field
+                id="email"
+                name="email"
+                type="email"
+                label="Their email"
+                autoComplete="off"
+                required
+              />
+              <Field
+                id="name"
+                name="name"
+                label="Their full name"
+                hint="Needed only if they don't have an account yet."
+                maxLength={100}
+              />
               <SelectField id="role" name="role" label="Role" defaultValue="staff">
                 <option value="doctor">Doctor</option>
                 <option value="nurse">Nurse</option>

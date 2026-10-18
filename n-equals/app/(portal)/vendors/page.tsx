@@ -45,7 +45,21 @@ export default async function VendorsPage({ searchParams }: PageProps<"/vendors"
         }
       : { status: filter };
   const prisma = getPrisma();
-  const p = paging(pageParam(params.page), await prisma.vendorProfile.count({ where }));
+  const reviewWhere = {
+    OR: [
+      { status: "submitted" as const },
+      { organization: { products: { some: { status: "submitted" as const } } } },
+    ],
+  };
+  const [total, counts, needsReview] = await Promise.all([
+    prisma.vendorProfile.count({ where }),
+    prisma.vendorProfile.groupBy({ by: ["status"], _count: true }),
+    // "Needs review" also counts verified vendors with a product waiting.
+    prisma.vendorProfile.count({ where: reviewWhere }),
+  ]);
+  const count = (f: Filter) =>
+    f === "review" ? needsReview : (counts.find((c) => c.status === f)?._count ?? 0);
+  const p = paging(pageParam(params.page), total);
   const vendors = await prisma.vendorProfile.findMany({
     where,
     orderBy: { submittedAt: "asc" },
@@ -76,7 +90,7 @@ export default async function VendorsPage({ searchParams }: PageProps<"/vendors"
             aria-current={f === filter ? "page" : undefined}
             className={`rounded-full border px-3 py-1 ${f === filter ? "border-brand bg-brand-soft text-brand-text" : "border-line text-ink hover:bg-subtle"}`}
           >
-            {LABEL[f]}
+            {LABEL[f]} ({count(f)})
           </Link>
         ))}
       </nav>

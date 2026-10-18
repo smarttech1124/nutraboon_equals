@@ -1,6 +1,6 @@
-import { SiteShell } from "@/components/site/site-shell";
+import { PortalShell } from "@/components/portal/portal-shell";
 
-/** Frame for the hospital portal and its sign-up page (ADR-068). */
+/** The hospital portal, its login and its registration (ADR-068), in the portal frame (ADR-089). */
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <SiteShell session>{children}</SiteShell>;
+  return <PortalShell kind="hospital">{children}</PortalShell>;
 }

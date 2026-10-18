@@ -1,15 +1,20 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/next";
 import type { AuthUser } from "@/lib/auth/service";
-import { getEntitlementService } from "@/lib/billing";
 import { getPrisma } from "@/lib/db";
 import { notify } from "@/lib/notifications";
 import { rolesToNotify } from "./agent";
+import { isActiveMember } from "./staff";
 
 /**
  * Hospital portal access (ADR-068). Members of a hospital organisation have a
  * role: owner and admin manage the hospital; doctor, nurse and staff work the
  * inbox and appointments of their departments.
+ *
+ * The portal is open whether or not the public Hospitals directory is
+ * switched on, so hospitals can register and get ready before launch
+ * (ADR-089). Staff other than the owner can use it only once the hospital
+ * is verified.
  */
 
 export type HospitalRole = "owner" | "admin" | "staff" | "doctor" | "nurse";
@@ -40,13 +45,13 @@ async function membershipOf(userId: string) {
   });
 }
 
-/** For portal pages: signed in, Hospitals on, and a member of a hospital. */
+/** For portal pages: signed in, an active member of a hospital. */
 export async function requireHospital(path: string, managerOnly = false): Promise<HospitalAccess> {
   const user = await currentUser("web");
-  if (!user) redirect(`/sign-in?next=${encodeURIComponent(path)}`);
-  if (!(await getEntitlementService().isEnabled("hospitals"))) redirect("/account");
+  if (!user) redirect(`/hospital/sign-in?next=${encodeURIComponent(path)}`);
   const m = await membershipOf(user.id);
   if (!m?.organization.hospital) redirect("/hospital/join");
+  if (!isActiveMember(m)) redirect("/hospital/pending");
   const role = m.role as HospitalRole;
   const manager = MANAGER_ROLES.includes(role);
   if (managerOnly && !manager) redirect("/hospital");
@@ -70,12 +75,15 @@ export async function asHospital(
   const user = await currentUser("web");
   if (!user) return { status: "error", message: "Please sign in again." };
   try {
-    if (!(await getEntitlementService().isEnabled("hospitals"))) {
-      return { status: "error", message: "The hospital portal is not available right now." };
-    }
     const m = await membershipOf(user.id);
     if (!m?.organization.hospital)
       return { status: "error", message: "Set up your hospital first." };
+    if (!isActiveMember(m)) {
+      return {
+        status: "error",
+        message: "Your staff account becomes active once the hospital is verified.",
+      };
+    }
     const role = m.role as HospitalRole;
     const manager = MANAGER_ROLES.includes(role);
     if (options.managerOnly && !manager) {
@@ -116,16 +124,18 @@ export async function notifyStaff(
 ): Promise<number> {
   const members = await getPrisma().membership.findMany({
     where: { organizationId },
-    select: { userId: true, role: true, departmentIds: true },
+    select: { userId: true, role: true, departmentIds: true, activatedAt: true },
   });
+  // Pending staff (hospital not yet verified) are never told about patients.
+  const active = members.filter(isActiveMember);
   const roles = rolesToNotify(options);
   const inDepartment = (m: { departmentIds: string[] }) =>
     !options.departmentId ||
     m.departmentIds.length === 0 ||
     m.departmentIds.includes(options.departmentId);
-  let targets = members.filter((m) => roles.includes(m.role) && inDepartment(m));
+  let targets = active.filter((m) => roles.includes(m.role) && inDepartment(m));
   if (targets.length === 0)
-    targets = members.filter((m) => MANAGER_ROLES.includes(m.role as HospitalRole));
+    targets = active.filter((m) => MANAGER_ROLES.includes(m.role as HospitalRole));
   for (const t of targets) await notify(t.userId, message);
   return targets.length;
 }

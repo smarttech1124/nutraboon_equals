@@ -38,7 +38,17 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
 
   const prisma = getPrisma();
   const where = status ? { status } : { status: { in: ["active" as const, "past_due" as const] } };
-  const p = paging(pageParam(params.page), await prisma.subscription.count({ where }));
+  const [total, counts] = await Promise.all([
+    prisma.subscription.count({ where }),
+    prisma.subscription.groupBy({ by: ["status"], _count: true }),
+  ]);
+  const count = (s: Status | undefined) =>
+    s
+      ? (counts.find((c) => c.status === s)?._count ?? 0)
+      : counts
+          .filter((c) => c.status === "active" || c.status === "past_due")
+          .reduce((n, c) => n + c._count, 0);
+  const p = paging(pageParam(params.page), total);
   const [subscriptions, plans] = await Promise.all([
     prisma.subscription.findMany({
       where,
@@ -72,7 +82,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
               aria-current={current ? "page" : undefined}
               className={`rounded-full border px-3 py-1 ${current ? "border-brand bg-brand-soft text-brand-text" : "border-line text-ink hover:bg-subtle"}`}
             >
-              {s ? STATUS_LABEL[s] : "Current"}
+              {s ? STATUS_LABEL[s] : "Current"} ({count(s)})
             </Link>
           );
         })}

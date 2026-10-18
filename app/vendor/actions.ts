@@ -36,9 +36,6 @@ export async function startVendorAction(
 ): Promise<VendorActionState> {
   const user = await currentUser("web");
   if (!user) return { status: "error", message: "Please sign in again." };
-  if (!(await getEntitlementService().isEnabled("vendors"))) {
-    return { status: "error", message: "The vendor portal is not available right now." };
-  }
   const name = field(formData, "name");
   if (name.length < 2 || name.length > 100) {
     return { status: "error", message: "Enter your business name." };

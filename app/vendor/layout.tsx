@@ -1,6 +1,6 @@
-import { SiteShell } from "@/components/site/site-shell";
+import { PortalShell } from "@/components/portal/portal-shell";
 
-/** Frame for the vendor portal and its sign-up page (ADR-067). */
+/** The vendor portal, its login and its registration (ADR-067), in the portal frame (ADR-089). */
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <SiteShell session>{children}</SiteShell>;
+  return <PortalShell kind="vendor">{children}</PortalShell>;
 }

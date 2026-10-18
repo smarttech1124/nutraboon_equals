@@ -1,6 +1,10 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useChatPanel } from "./ChatProvider";
+
+/** Partner portals (ADR-089) show only their own tools, not the public assistant. */
+const PORTAL = /^\/(hospital|vendor|nutritionist)(\/|$)/;
 
 type Props = {
   variant?: "hero" | "floating";
@@ -8,10 +12,11 @@ type Props = {
 
 export function ChatLauncher({ variant = "hero" }: Props) {
   const { isOpen, mode, open } = useChatPanel();
+  const pathname = usePathname() ?? "/";
 
   if (variant === "floating") {
     // While open or minimized, the chat itself (or its bar) takes this place.
-    if (mode !== "closed") return null;
+    if (mode !== "closed" || PORTAL.test(pathname)) return null;
     return (
       // Global entry point (ADR-072): bottom right on every main-site page, above
       // the safe area on phones. Icon only on small screens, labelled on wider ones.

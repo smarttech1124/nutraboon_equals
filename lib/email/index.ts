@@ -88,7 +88,18 @@ export class ResendEmailSender implements EmailSender {
       throw new EmailSendError(null);
     }
     if (!response.ok) {
-      logDelivery("email_failed", email, { status: response.status });
+      // Resend's reason (e.g. "validation_error: The x.com domain is not
+      // verified") explains configuration problems; addresses are removed.
+      const body = (await response.json().catch(() => null)) as {
+        name?: unknown;
+        message?: unknown;
+      } | null;
+      const reason = [body?.name, body?.message]
+        .filter((part): part is string => typeof part === "string")
+        .join(": ")
+        .replace(/[^\s<>()"']+@[^\s<>()"']+/g, "[address]")
+        .slice(0, 300);
+      logDelivery("email_failed", email, { status: response.status, reason: reason || null });
       throw new EmailSendError(response.status);
     }
     const body = (await response.json().catch(() => null)) as { id?: unknown } | null;
@@ -99,7 +110,7 @@ export class ResendEmailSender implements EmailSender {
 function logDelivery(
   event: "email_sent" | "email_failed",
   email: Email,
-  detail: { id?: string | null; status?: number | null },
+  detail: { id?: string | null; status?: number | null; reason?: string | null },
 ) {
   const line = JSON.stringify({
     event,

@@ -65,4 +65,31 @@ describe("branded email templates (ADR-086)", () => {
     expect(line).not.toContain("ada@");
     info.mockRestore();
   });
+
+  it("logs Resend's reason for a refusal, with addresses removed", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const sender = new ResendEmailSender(
+      "re_test",
+      "Equals <hello@example.test>",
+      vi.fn<typeof fetch>(async () =>
+        Response.json(
+          {
+            name: "validation_error",
+            message:
+              "You can only send testing emails to your own email address (owner@example.test).",
+          },
+          { status: 403 },
+        ),
+      ),
+    );
+    await expect(
+      sender.send({ to: "ada@example.test", ...verifyEmailMessage("t", SITE) }),
+    ).rejects.toMatchObject({ status: 403 });
+    const line = JSON.parse(String(error.mock.calls[0]![0]));
+    expect(line).toMatchObject({ event: "email_failed", template: "verify_email", status: 403 });
+    expect(line.reason).toBe(
+      "validation_error: You can only send testing emails to your own email address ([address]).",
+    );
+    error.mockRestore();
+  });
 });

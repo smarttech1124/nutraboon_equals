@@ -46,7 +46,15 @@ export default async function AccountOverview() {
   if (!user) redirect("/sign-in?next=/account");
   const prisma = getPrisma();
   const service = getEntitlementService();
-  const [flags, subscriptions, planCount, upcomingSessions, upcomingHospital] = await Promise.all([
+  const [
+    flags,
+    subscriptions,
+    planCount,
+    upcomingSessions,
+    upcomingHospital,
+    conversation,
+    hospitalMember,
+  ] = await Promise.all([
     service.featureFlags(),
     prisma.subscription.findMany({
       where: { userId: user.id, status: { in: ["active", "past_due"] } },
@@ -63,7 +71,22 @@ export default async function AccountOverview() {
     prisma.hospitalAppointment.count({
       where: { patientId: user.id, status: "booked", startsAt: { gte: new Date() } },
     }),
+    // The conversation to resume: the latest one still open with a hospital (ADR-089).
+    prisma.accessConversation.findFirst({
+      where: { patientId: user.id, status: { in: ["open", "escalated"] } },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, updatedAt: true, organization: { select: { name: true } } },
+    }),
+    prisma.membership.findFirst({
+      where: { userId: user.id, organization: { kind: "hospital" } },
+      select: { organization: { select: { name: true } } },
+    }),
   ]);
+  const updated = new Intl.DateTimeFormat("en-NG", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Africa/Lagos",
+  });
   const firstName = user.name.split(/\s+/)[0];
   const planName = subscriptions.map((s) => s.plan.name).join(", ") || "Free plan";
 
@@ -154,6 +177,26 @@ export default async function AccountOverview() {
                 icon="stethoscope"
                 title="Meet a nutritionist"
                 text="Verified professionals and your requests"
+              />
+            </li>
+          )}
+          {conversation && (
+            <li>
+              <Tile
+                href={`/hospitals/messages/${conversation.id}`}
+                icon="chat"
+                title="Continue your hospital conversation"
+                text={`${conversation.organization.name} · updated ${updated.format(conversation.updatedAt)}`}
+              />
+            </li>
+          )}
+          {hospitalMember && (
+            <li>
+              <Tile
+                href="/hospital"
+                icon="hospital"
+                title="Hospital portal"
+                text={`Work for ${hospitalMember.organization.name}`}
               />
             </li>
           )}

@@ -1200,3 +1200,23 @@ Only test-mode keys belong outside production.
 - **Refactor:** `lib/http/chat-deps.ts` holds the chat dependencies shared by `/api/chat` and WhatsApp.
 
 **Consequence:** setup and policy notes are in `docs/whatsapp.md`, and the privacy notice names WhatsApp. Business-initiated messages (reminders) would need approved templates and recorded opt-in; they are not built.
+
+## ADR-089 — Separate Partner Portals, Hospital Self-Registration, Pending Staff (2026-10-16)
+
+**Context:** the hospital, vendor and nutritionist portals sat inside the public site's frame, with its Products, Vendors and Nutritionists menu. There was one login page for everyone. Hospitals could register only after creating a personal account. Staff had to have an account before they could be added. Staff added before verification could see patients' messages. Every portal also closed whenever its public directory was switched off, so partners could not onboard before launch, while the "Coming soon" pages invited them to register.
+
+**Decision:**
+
+- **Portal frame** (`components/portal/portal-shell.tsx`): `/hospital`, `/vendor` and `/nutritionist` use their own header with the portal's name, "Main site" and Log out, and a minimal footer. The public navigation and the floating assistant are not shown. Each portal's own menu still shows only what the role may use (hospital staff see the inbox and appointments; owners and administrators also see setup).
+- **Logins:** `/hospital/sign-in`, `/vendor/sign-in` and `/nutritionist/sign-in` each say which portal they open and go there after login, accepting only paths inside that portal. It is the same account system. The personal login page links to all three.
+- **Portals no longer depend on the public switch.** Partners can register, set up and submit for verification while their directory still shows "Coming soon". Patient-facing features (directories, booking, messaging) still need the switch.
+- **Hospital registration** (`/hospital/join`): someone new creates their account and the hospital in one form and becomes its owner. Someone signed in only names the hospital. The owner manages everything while verification is pending.
+- **Adding staff by email:**
+  - An existing account is linked.
+  - For a new email, an account is created in their name with no password.
+  - `Membership.activatedAt` records when a member can use the portal. Staff added before verification are pending: they cannot open the portal (they see `/hospital/pending`) and are never notified about patients. The owner is always active.
+  - On Approve or Reinstate in n-equals, every pending member is activated and notified. Accounts created for them also get the branded invitation email (`staff_invite`), which sends them to set their own password through the reset page.
+- **Public account:** Log out in the account menu and in the site header. The account menu stays in view while scrolling. "What would you like to do?" shows the latest open hospital conversation to resume, and a Hospital portal tile for hospital members.
+- **n-equals:** the vendor, hospital and subscription status filters show counts, like the nutritionist page ("Needs review (1)", "Verified (5)").
+
+**Consequence:** partners work in a portal that only shows their tools, hospitals can join and get ready before launch, and no staff member sees patient information before the hospital is verified. The migration `membership_activation` keeps every existing member active.

@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { ActionForm } from "@/components/ui/action-form";
 import { Card, Field } from "@/components/ui";
 import { currentUser } from "@/lib/auth/next";
-import { getEntitlementService } from "@/lib/billing";
 import { ownedVendorOrgId } from "@/lib/vendors/ownership";
 import { startVendorAction } from "../actions";
 
@@ -13,7 +12,6 @@ export const metadata: Metadata = { title: "Become a vendor" };
 export default async function JoinPage() {
   const user = await currentUser("web");
   if (!user) redirect("/sign-up?next=/vendor/join");
-  if (!(await getEntitlementService().isEnabled("vendors"))) redirect("/account");
   if (await ownedVendorOrgId(user.id)) redirect("/vendor");
 
   return (

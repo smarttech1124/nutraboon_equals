@@ -4,7 +4,6 @@ import { getStructuredProvider } from "@/lib/ai/settings/runtime";
 import type { AIProvider } from "@/lib/ai/types";
 import { currentUser } from "@/lib/auth/next";
 import type { AuthUser } from "@/lib/auth/service";
-import { getEntitlementService } from "@/lib/billing";
 import { getPrisma } from "@/lib/db";
 import { analyseQualifications, PROMPT_VERSION } from "./analysis";
 
@@ -12,11 +11,14 @@ import { analyseQualifications, PROMPT_VERSION } from "./analysis";
 
 export type PortalAccess = { user: AuthUser; status: string };
 
-/** For portal pages: signed in, feature on, and a profile started. */
+/**
+ * For portal pages: signed in and a profile started. Open whether or not the
+ * public Nutritionists directory is switched on, so nutritionists can apply
+ * before launch (ADR-089).
+ */
 export async function requireNutritionist(path: string): Promise<PortalAccess> {
   const user = await currentUser("web");
-  if (!user) redirect(`/sign-in?next=${encodeURIComponent(path)}`);
-  if (!(await getEntitlementService().isEnabled("nutritionists"))) redirect("/account");
+  if (!user) redirect(`/nutritionist/sign-in?next=${encodeURIComponent(path)}`);
   const profile = await getPrisma().nutritionistProfile.findUnique({
     where: { userId: user.id },
     select: { status: true },
@@ -44,9 +46,6 @@ export async function asNutritionist(
   const user = await currentUser("web");
   if (!user) return PORTAL_SIGNED_OUT;
   try {
-    if (!(await getEntitlementService().isEnabled("nutritionists"))) {
-      return { status: "error", message: "The nutritionist portal is not available right now." };
-    }
     const profile = await getPrisma().nutritionistProfile.findUnique({
       where: { userId: user.id },
       select: { status: true },

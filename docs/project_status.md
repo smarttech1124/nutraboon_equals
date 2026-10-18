@@ -97,6 +97,19 @@ From [project_requirements.md §15](project_requirements.md). "Live" means check
 - **Claude (ADR-059):** an AI provider by environment variable or in n-equals. Tested with a fake client only.
 - **Built since:** phases B to E (below). Not built: the N-ATLaS speech recognition server (ADR-069).
 
+### Partner portals and hospital onboarding (16 October 2026)
+
+- **Portals (ADR-089):** hospital, vendor and nutritionist portals have their own frame and login pages (`/hospital/sign-in`, `/vendor/sign-in`, `/nutritionist/sign-in`), with no public navigation, and work before their public directory is switched on.
+- **Hospitals:** one-step registration at `/hospital/join`. Staff are added by email (an account is created if needed) and stay pending until the hospital is verified, then are activated and emailed.
+- **Account:** Log out in the menu and header, a sticky account menu, and "Continue your hospital conversation" on the overview.
+- **n-equals:** status counts on vendors, hospitals and subscriptions.
+- **Database:** the `membership_activation` migration (applied to the configured database on 18 October 2026; Vercel production builds apply it too).
+
+### Demo tour and infant-rule fix (15 October 2026)
+
+- **Demo video (ADR-088):** a new tour covering the home page, five chat questions, Yorùbá and Igbo, the sign-language demo, voice (input simulated, labelled), and the products, nutritionists and hospitals pages; the spoken words are added as sound when polishing.
+- **Safety fix (ADR-088):** breast milk and formula are no longer flagged by the under-6-months rule, and that rule no longer blocks a pregnant or breastfeeding user's questions about her own food.
+
 ### Chat redesign, visuals, email, WhatsApp and listings (14 October 2026)
 
 - **Chat (ADR-083):** non-modal side panel on wider screens (the page stays usable), full screen on phones; New chat, expand, minimize to a bar.

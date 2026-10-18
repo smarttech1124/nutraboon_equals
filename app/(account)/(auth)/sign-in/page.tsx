@@ -37,6 +37,29 @@ export default async function SignInPage({ searchParams }: PageProps<"/sign-in">
           Create an account
         </Link>
       </p>
+      <nav aria-label="Partner logins" className="mt-6 border-t border-line pt-4 text-sm">
+        <p className="font-medium text-ink">Logging in for work?</p>
+        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          <li>
+            <Link href="/hospital/sign-in" className="text-brand-text underline underline-offset-2">
+              Hospital portal
+            </Link>
+          </li>
+          <li>
+            <Link href="/vendor/sign-in" className="text-brand-text underline underline-offset-2">
+              Vendor portal
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/nutritionist/sign-in"
+              className="text-brand-text underline underline-offset-2"
+            >
+              Nutritionist portal
+            </Link>
+          </li>
+        </ul>
+      </nav>
     </Card>
   );
 }

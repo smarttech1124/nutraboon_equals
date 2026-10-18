@@ -11,7 +11,7 @@ import { appUrl } from "./index";
  * fallbacks. All text passed in is escaped.
  */
 
-export type EmailTemplate = "verify_email" | "reset_password" | "notification";
+export type EmailTemplate = "verify_email" | "reset_password" | "notification" | "staff_invite";
 
 export type RenderedEmail = {
   subject: string;
@@ -179,6 +179,32 @@ export function notificationMessage(
       ...(message.link
         ? { action: { label: "Open Nutraboom Equals", url: `${site}${message.link}` } }
         : {}),
+    },
+    site,
+  );
+}
+
+/**
+ * Invitation for hospital staff whose account the hospital created (ADR-089),
+ * sent once the hospital is verified. They choose their own password through
+ * the reset page; the hospital never sets or sees it.
+ */
+export function staffInviteMessage(
+  input: { hospitalName: string; email: string },
+  site = appUrl(),
+): RenderedEmail {
+  return render(
+    {
+      template: "staff_invite",
+      subject: `You've been added to ${input.hospitalName} on Nutraboom Equals`,
+      preheader: "Set your password to open the hospital portal.",
+      heading: `Join ${input.hospitalName} on Nutraboom Equals`,
+      paragraphs: [
+        `${input.hospitalName} added you as a staff member. In the hospital portal you can see appointments and reply to patients who message by text or voice.`,
+        `To start, choose a password for your account (${input.email}).`,
+      ],
+      action: { label: "Choose my password", url: `${site}/forgot-password` },
+      note: "Enter this email address on that page and we'll send you a link to set your password. Then sign in at the hospital portal. If you didn't expect this, you can ignore this email.",
     },
     site,
   );

@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { recordAudit } from "@/lib/audit";
 import { allowAttempt, currentUser } from "@/lib/auth/next";
-import { getEntitlementService } from "@/lib/billing";
 import { getPrisma } from "@/lib/db";
 import { notify } from "@/lib/notifications";
 import { availabilityFromForm } from "@/lib/nutritionists/availability";
@@ -43,7 +42,6 @@ const TOO_MANY: PortalActionState = {
 export async function startProfileAction(): Promise<void> {
   const user = await currentUser("web");
   if (!user) redirect("/sign-in?next=/nutritionist/join");
-  if (!(await getEntitlementService().isEnabled("nutritionists"))) redirect("/account");
   await getPrisma().nutritionistProfile.upsert({
     where: { userId: user.id },
     create: { userId: user.id, specializations: [], expertise: [], sessionTypes: [] },

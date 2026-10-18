@@ -5,6 +5,7 @@ import { asAdmin, FAILED, type ActionState } from "@admin/lib/access";
 import { recordAudit } from "@/lib/audit";
 import { getPrisma } from "@/lib/db";
 import { notify } from "@/lib/notifications";
+import { activateHospitalStaff } from "@/lib/hospitals/staff";
 import { orgStatusFor } from "@/lib/vendors/server";
 
 /**
@@ -97,7 +98,14 @@ export async function hospitalReviewAction(
     for (const m of managers) {
       await notify(m.userId, { ...MESSAGES[decision], link: "/hospital" });
     }
+    // Staff added while the hospital waited are activated and told now (ADR-089).
+    const activated = rule.to === "verified" ? await activateHospitalStaff(orgId) : 0;
     revalidatePath("/hospitals", "layout");
-    return { status: "success", message: "Decision saved and the hospital was notified." };
+    return {
+      status: "success",
+      message: activated
+        ? `Decision saved and the hospital was notified. ${activated} staff account${activated === 1 ? " is" : "s are"} now active.`
+        : "Decision saved and the hospital was notified.",
+    };
   });
 }

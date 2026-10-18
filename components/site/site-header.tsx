@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState, type ReactNode } from "react";
+import { signOutAction } from "@/app/(account)/actions";
 import { Icon } from "./icons";
 import { useSessionStatus } from "./use-session";
 
@@ -89,12 +90,22 @@ export function SiteHeader({ logo, signedIn }: { logo: ReactNode; signedIn?: boo
             {status === "unknown" ? (
               <span aria-hidden="true" className="hidden h-10 w-44 sm:inline-block" />
             ) : status === "signedIn" ? (
-              <Link
-                href="/account"
-                className="hidden min-h-10 items-center rounded-full bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong sm:inline-flex"
-              >
-                Your account
-              </Link>
+              <>
+                <Link
+                  href="/account"
+                  className="hidden min-h-10 items-center rounded-full bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong sm:inline-flex"
+                >
+                  Your account
+                </Link>
+                <form action={signOutAction} className="hidden sm:block">
+                  <button
+                    type="submit"
+                    className="rounded-full px-4 py-2 text-sm font-semibold text-ink hover:bg-subtle"
+                  >
+                    Log out
+                  </button>
+                </form>
+              </>
             ) : (
               <>
                 <Link
@@ -148,12 +159,22 @@ export function SiteHeader({ logo, signedIn }: { logo: ReactNode; signedIn?: boo
             })}
           </ul>
           {status === "unknown" ? null : status === "signedIn" ? (
-            <Link
-              href="/account"
-              className="mt-3 flex min-h-11 items-center justify-center rounded-full bg-brand font-semibold text-white sm:hidden"
-            >
-              Your account
-            </Link>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:hidden">
+              <Link
+                href="/account"
+                className="flex min-h-11 items-center justify-center rounded-full bg-brand font-semibold text-white"
+              >
+                Your account
+              </Link>
+              <form action={signOutAction}>
+                <button
+                  type="submit"
+                  className="flex min-h-11 w-full items-center justify-center rounded-full border border-line font-semibold text-ink"
+                >
+                  Log out
+                </button>
+              </form>
+            </div>
           ) : (
             <div className="mt-3 grid grid-cols-2 gap-2 sm:hidden">
               <Link

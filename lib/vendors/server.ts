@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/auth/next";
 import type { AuthUser } from "@/lib/auth/service";
-import { getEntitlementService } from "@/lib/billing";
 import { getPrisma } from "@/lib/db";
 import { ownerOf } from "./ownership";
 
@@ -20,11 +19,14 @@ async function findVendor(userId: string) {
   });
 }
 
-/** For portal pages: signed in, Vendors switched on, and a business started. */
+/**
+ * For portal pages: signed in and a business started. Open whether or not
+ * the public Vendors directory is switched on, so businesses can register
+ * before launch (ADR-089).
+ */
 export async function requireVendor(path: string): Promise<VendorAccess> {
   const user = await currentUser("web");
-  if (!user) redirect(`/sign-in?next=${encodeURIComponent(path)}`);
-  if (!(await getEntitlementService().isEnabled("vendors"))) redirect("/account");
+  if (!user) redirect(`/vendor/sign-in?next=${encodeURIComponent(path)}`);
   const org = await findVendor(user.id);
   if (!org?.vendor) redirect("/vendor/join");
   return { user, org: { id: org.id, name: org.name }, status: org.vendor.status };
@@ -45,9 +47,6 @@ export async function asVendor(
   const user = await currentUser("web");
   if (!user) return { status: "error", message: "Please sign in again." };
   try {
-    if (!(await getEntitlementService().isEnabled("vendors"))) {
-      return { status: "error", message: "The vendor portal is not available right now." };
-    }
     const org = await findVendor(user.id);
     if (!org?.vendor) return { status: "error", message: "Set up your business first." };
     if (org.vendor.status === "suspended" || org.vendor.status === "rejected") {

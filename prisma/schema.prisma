@@ -425,6 +425,9 @@ model Membership {
   role           MembershipRole
   /// Hospital staff: the departments they handle (ADR-068).
   departmentIds  String[]       @default([])
+  /// When the member can use the portal. Hospital staff added before the
+  /// hospital is verified stay pending (null) until verification (ADR-089).
+  activatedAt    DateTime?
   createdAt      DateTime       @default(now())
 
   @@id([userId, organizationId])

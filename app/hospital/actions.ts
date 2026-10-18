@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { recordAudit } from "@/lib/audit";
-import { currentUser } from "@/lib/auth/next";
+import { allowAttempt, currentUser, getAuthService, startSession } from "@/lib/auth/next";
+import { getEmailSender } from "@/lib/email";
+import { verifyEmailMessage } from "@/lib/email/templates";
 import { getEntitlementService } from "@/lib/billing";
 import { canonicalState } from "@/lib/budget/regions";
 import { getPrisma } from "@/lib/db";
@@ -19,6 +21,8 @@ import {
   type HospitalRole,
 } from "@/lib/hospitals/server";
 import { notify } from "@/lib/notifications";
+import { NO_PASSWORD, emailSchema } from "@/lib/auth/service";
+import { announceActivation } from "@/lib/hospitals/staff";
 import { availabilityFromForm } from "@/lib/nutritionists/availability";
 
 /** Hospital portal actions (ADR-068). Each acts on the member's own hospital only. */
@@ -43,34 +47,84 @@ export async function startHospitalAction(
 ): Promise<HospitalActionState> {
   const user = await currentUser("web");
   if (!user) return { status: "error", message: "Please sign in again." };
-  if (!(await getEntitlementService().isEnabled("hospitals"))) {
-    return { status: "error", message: "The hospital portal is not available right now." };
-  }
   const name = field(formData, "name");
   if (name.length < 2 || name.length > 120)
     return { status: "error", message: "Enter the hospital's name." };
-  const prisma = getPrisma();
   if (
-    await prisma.membership.findFirst({
+    await getPrisma().membership.findFirst({
       where: { userId: user.id, organization: { kind: "hospital" } },
     })
   ) {
     redirect("/hospital");
   }
-  const org = await prisma.organization.create({
+  await createHospital(user.id, name);
+  redirect("/hospital/profile");
+}
+
+/** A new hospital, with this person as its owner (always active, ADR-089). */
+async function createHospital(userId: string, name: string): Promise<void> {
+  const org = await getPrisma().organization.create({
     data: {
       kind: "hospital",
       name,
-      memberships: { create: { userId: user.id, role: "owner" } },
+      memberships: { create: { userId, role: "owner", activatedAt: new Date() } },
       hospital: { create: { accessibility: [] } },
     },
   });
   await recordAudit({
-    actorUserId: user.id,
+    actorUserId: userId,
     action: "hospital.started",
     targetType: "hospital",
     targetId: org.id,
   });
+}
+
+/**
+ * Registration for someone new to Nutraboom Equals (ADR-089): their account
+ * and the hospital in one step. They become its owner and can complete the
+ * hospital's details, departments and staff while it waits for verification.
+ */
+export async function registerHospitalAction(
+  _prev: HospitalActionState,
+  formData: FormData,
+): Promise<HospitalActionState> {
+  if (await currentUser("web")) redirect("/hospital/join");
+  if (!(await allowAttempt("signUp", "web"))) {
+    return { status: "error", message: "Too many attempts. Please wait and try again." };
+  }
+  const hospitalName = field(formData, "hospitalName");
+  if (hospitalName.length < 2 || hospitalName.length > 120) {
+    return { status: "error", message: "Enter the hospital or clinic name." };
+  }
+  const password =
+    typeof formData.get("password") === "string" ? String(formData.get("password")) : "";
+  try {
+    const auth = getAuthService();
+    const created = await auth.signUp({
+      email: field(formData, "email"),
+      name: field(formData, "name"),
+      password,
+    });
+    if (!created.ok) return { status: "error", message: created.error };
+    const session = await auth.signIn({ email: created.user.email, password, app: "web" });
+    if (!session.ok) throw new Error("sign-in after registration failed");
+    await startSession("web", session.token, session.expiresAt);
+    await createHospital(created.user.id, hospitalName);
+    const sender = getEmailSender();
+    if (sender.available) {
+      const token = await auth.issueEmailVerification(created.user.id);
+      await sender.send({ to: created.user.email, ...verifyEmailMessage(token) }).catch(() => {});
+    }
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: "hospital_action_error",
+        action: "register",
+        error: error instanceof Error ? error.name : "unknown",
+      }),
+    );
+    return { status: "error", message: "Something went wrong. Please try again in a moment." };
+  }
   redirect("/hospital/profile");
 }
 
@@ -283,29 +337,43 @@ export async function saveDepartmentAction(
 
 const STAFF_ROLES: HospitalRole[] = ["admin", "doctor", "nurse", "staff"];
 
+/**
+ * Adds a staff member by email (ADR-089). An existing account is linked; for
+ * a new email, an account is made in their name with no password, and they
+ * set one themselves from the invitation. Staff added before the hospital is
+ * verified stay pending until verification, and only then are told.
+ */
 export async function addStaffAction(
   _prev: HospitalActionState,
   formData: FormData,
 ): Promise<HospitalActionState> {
-  return asHospital("add_staff", { managerOnly: true }, async ({ user, org }) => {
-    const email = field(formData, "email").toLowerCase();
+  return asHospital("add_staff", { managerOnly: true }, async ({ user, org, status }) => {
+    const email = emailSchema.safeParse(field(formData, "email"));
+    if (!email.success) return { status: "error", message: "Enter their email address." };
     const role = field(formData, "role") as HospitalRole;
     if (!STAFF_ROLES.includes(role)) return { status: "error", message: "Choose a role." };
     const prisma = getPrisma();
-    const staff = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-    if (!staff) {
-      return {
-        status: "error",
-        message:
-          "No Nutraboom Equals account uses that email. Ask them to create one first, then add them.",
-      };
+    const existing = await prisma.user.findUnique({
+      where: { email: email.data },
+      select: { id: true, status: true },
+    });
+    if (existing?.status === "suspended") {
+      return { status: "error", message: "That account is suspended and cannot be added." };
     }
     if (
-      await prisma.membership.findFirst({
-        where: { userId: staff.id, organization: { kind: "hospital" } },
-      })
+      existing &&
+      (await prisma.membership.findFirst({
+        where: { userId: existing.id, organization: { kind: "hospital" } },
+      }))
     ) {
       return { status: "error", message: "That person already belongs to a hospital." };
+    }
+    const name = field(formData, "name");
+    if (!existing && (name.length < 2 || name.length > 100)) {
+      return {
+        status: "error",
+        message: "There is no account with that email yet. Add their full name to create one.",
+      };
     }
     const limit = (await getEntitlementService().entitlementsFor({ organizationId: org.id }))[
       "hospital.maxStaff"
@@ -317,12 +385,22 @@ export async function addStaffAction(
       where: { organizationId: org.id, id: { in: formData.getAll("departments").map(String) } },
       select: { id: true },
     });
+    const verified = status === "verified";
+    const staffId =
+      existing?.id ??
+      (
+        await prisma.user.create({
+          data: { email: email.data, name, passwordHash: NO_PASSWORD },
+          select: { id: true },
+        })
+      ).id;
     await prisma.membership.create({
       data: {
-        userId: staff.id,
+        userId: staffId,
         organizationId: org.id,
         role,
         departmentIds: departments.map((d) => d.id),
+        activatedAt: verified ? new Date() : null,
       },
     });
     await recordAudit({
@@ -330,15 +408,18 @@ export async function addStaffAction(
       action: "hospital.staff_added",
       targetType: "hospital",
       targetId: org.id,
-      metadata: { userId: staff.id, role },
+      metadata: { userId: staffId, role, newAccount: !existing, pending: !verified },
     });
-    await notify(staff.id, {
-      title: `You were added to ${org.name}`,
-      body: "You can now see appointments and patient messages in the hospital portal.",
-      link: "/hospital",
-    });
+    if (verified) await announceActivation({ userId: staffId }, org, !existing);
     revalidatePath("/hospital/staff");
-    return { status: "success", message: "Staff member added." };
+    return {
+      status: "success",
+      message: verified
+        ? existing
+          ? "Staff member added. They can open the hospital portal now."
+          : "Staff member added. We've emailed them how to set their password."
+        : "Staff member added. Their account becomes active once your hospital is verified, and we'll tell them then.",
+    };
   });
 }
 

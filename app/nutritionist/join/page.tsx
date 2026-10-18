@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Button, Card } from "@/components/ui";
 import { currentUser } from "@/lib/auth/next";
-import { getEntitlementService } from "@/lib/billing";
 import { getPrisma } from "@/lib/db";
 import { startProfileAction } from "../actions";
 
@@ -12,7 +11,6 @@ export const metadata: Metadata = { title: "Join as a nutritionist" };
 export default async function JoinPage() {
   const user = await currentUser("web");
   if (!user) redirect("/sign-up?next=/nutritionist/join");
-  if (!(await getEntitlementService().isEnabled("nutritionists"))) redirect("/account");
   const existing = await getPrisma().nutritionistProfile.findUnique({
     where: { userId: user.id },
     select: { userId: true },
