@@ -186,7 +186,7 @@ export type SafetyContext = {
   infant: boolean;
   childUnder5: boolean;
   pregnant: boolean;
-  /** Everyone being planned for is under 6 months old. */
+  /** Everyone being planned for is under 6 months old (the user is not pregnant or breastfeeding). */
   onlyBabiesUnder6Months?: boolean;
   breastfeeding?: boolean;
   conditions?: string[];
@@ -201,7 +201,12 @@ export function safetyContextOf(profile: UserProfile): SafetyContext {
     infant: ages.some((a) => a < 1),
     childUnder5: ages.some((a) => a < 5),
     pregnant: profile.pregnant === true,
+    // A pregnant or breastfeeding user eats too, so food can be for them:
+    // the household is then not only babies (e.g. "can I eat pineapple?"
+    // after mentioning a 4-month-old).
     onlyBabiesUnder6Months:
+      profile.pregnant !== true &&
+      profile.breastfeeding !== true &&
       (profile.members?.length ?? 0) > 0 &&
       ages.length === profile.members!.length &&
       ages.every((a) => a < 0.5),

@@ -127,6 +127,10 @@ export const PREGNANCY_AVOID: { terms: string[]; reason: string }[] = [
   { terms: ["agbo"], reason: "herbal mixtures are not safe to suggest in pregnancy" },
 ];
 
+/** Milk feeds for babies under 6 months (WHO): never a violation of the infant rule. */
+const MILK_FEEDS =
+  /\b(breast ?milk|expressed (breast )?milk|breast ?feed(ing|s)?|infant formula|formula( milk)?)\b/i;
+
 export type MedicalContext = {
   pregnant?: boolean;
   /** Every person being planned for is under 6 months old. */
@@ -168,10 +172,12 @@ export function checkMedicalRules(
     }
   }
 
-  if (context.onlyBabiesUnder6Months && reply.suggested.length > 0) {
+  // Breast milk and infant formula are what the rule recommends, not foods.
+  const foods = reply.suggested.filter((item) => !MILK_FEEDS.test(item));
+  if (context.onlyBabiesUnder6Months && foods.length > 0) {
     violations.push({
       kind: "child_safety",
-      term: reply.suggested.slice(0, 3).join(", "),
+      term: foods.slice(0, 3).join(", "),
       reason:
         "babies under 6 months should have only breast milk or infant formula (WHO); suggest no foods and refer to a child welfare clinic",
     });

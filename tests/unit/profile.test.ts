@@ -63,6 +63,16 @@ describe("safetyContextOf", () => {
     ).toBe(false);
   });
 
+  it("does not apply the babies-only rule to a pregnant or breastfeeding user, who eats too", () => {
+    const baby = [{ label: "baby", ageYears: 0.3 }];
+    expect(safetyContextOf({ members: baby, pregnant: true }).onlyBabiesUnder6Months).toBe(false);
+    expect(safetyContextOf({ members: baby, breastfeeding: true }).onlyBabiesUnder6Months).toBe(
+      false,
+    );
+    // The baby still counts as an infant for every other rule.
+    expect(safetyContextOf({ members: baby, pregnant: true }).infant).toBe(true);
+  });
+
   it("carries conditions, breastfeeding and medication", () => {
     expect(
       safetyContextOf({ conditions: ["diabetes"], breastfeeding: true, takesMedication: true }),

@@ -157,6 +157,24 @@ describe("checkMedicalRules", () => {
     expect(violations[0].reason).toMatch(/breast milk or infant formula/);
   });
 
+  it("never treats breast milk or infant formula as a food for young babies", () => {
+    expect(
+      checkMedicalRules(
+        {
+          message: "Only breast milk or infant formula until 6 months.",
+          suggested: ["breast milk", "infant formula", "expressed breast milk"],
+        },
+        { onlyBabiesUnder6Months: true },
+      ),
+    ).toEqual([]);
+    expect(
+      checkMedicalRules(
+        { message: "Try pap with breast milk.", suggested: ["breast milk", "pap"] },
+        { onlyBabiesUnder6Months: true },
+      )[0],
+    ).toMatchObject({ kind: "child_safety", term: "pap" });
+  });
+
   it("classifies doses and medication changes as medication violations", () => {
     const violations = checkMedicalRules(
       { message: "Take 400 mcg folic acid. You could stop your metformin.", suggested: [] },

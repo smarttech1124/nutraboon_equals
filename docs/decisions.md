@@ -1201,6 +1201,36 @@ Only test-mode keys belong outside production.
 
 **Consequence:** setup and policy notes are in `docs/whatsapp.md`, and the privacy notice names WhatsApp. Business-initiated messages (reminders) would need approved templates and recorded opt-in; they are not built.
 
+## ADR-088 — Feature Demo Tour, Simulated Voice Input, and an Infant-Rule Fix (2026-10-15)
+
+**Context:** a new demo video was requested, covering:
+
+- the home page;
+- five safety-sensitive chat questions;
+- Yorùbá and Igbo conversations;
+- the sign-language demo;
+- voice input with a spoken reply;
+- the products, nutritionists and hospitals pages.
+
+Recording the chat exposed a safety-check bug.
+
+**Decision:**
+
+- `npm run demo:record` now runs that tour (`docs/DEMO_README.md`). Each step checks its result:
+  - every reply arrives;
+  - the Yorùbá and Igbo replies contain those languages' letters;
+  - the sign-language video loads;
+  - the voice transcript, reply and reading aloud happen;
+  - each directory has listings rather than "Coming soon".
+- **Voice input is simulated, and the video says so.** Chrome and Edge, given a recorded voice clip under automation, detected sound but returned no words. `scripts/demo/voice-shim.js`, injected only into the recording browser, stands in for speech recognition. Everything after the words is the app's real flow.
+- **Sound:** a screen recording is silent. The recorder notes when the question was spoken and when the app read the reply aloud, and synthesises the same words with Windows' built-in voices. `demo:polish` places them at those moments.
+- **Infant-rule fix:**
+  - The check "babies under 6 months get no foods" flagged breast milk and infant formula themselves. It now ignores milk feeds.
+  - It also applied to a pregnant or breastfeeding user asking about her own food: "Can I eat pineapple during pregnancy?" after mentioning a 4-month-old got the safety fallback. A pregnant or breastfeeding user now counts as an adult the food can be for. The baby still counts as an infant for every other rule.
+  - Tests cover both cases.
+
+**Consequence:** the demo shows real answers to sensitive questions. The safety layer no longer refuses correct infant-feeding advice or a mother's question about her own diet. (Restored on 18 October 2026, after these changes were lost from the repository.)
+
 ## ADR-089 — Separate Partner Portals, Hospital Self-Registration, Pending Staff (2026-10-16)
 
 **Context:** the hospital, vendor and nutritionist portals sat inside the public site's frame, with its Products, Vendors and Nutritionists menu. There was one login page for everyone. Hospitals could register only after creating a personal account. Staff had to have an account before they could be added. Staff added before verification could see patients' messages. Every portal also closed whenever its public directory was switched off, so partners could not onboard before launch, while the "Coming soon" pages invited them to register.
