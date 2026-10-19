@@ -22,10 +22,12 @@ export const DEFAULT_API_VERSION = "v25.0";
 export function getWhatsAppConfig(
   env: Record<string, string | undefined> = process.env,
 ): WhatsAppConfig | null {
-  const accessToken = env.WHATSAPP_ACCESS_TOKEN;
-  const phoneNumberId = env.WHATSAPP_PHONE_NUMBER_ID;
-  const appSecret = env.WHATSAPP_APP_SECRET;
-  const verifyToken = env.WHATSAPP_VERIFY_TOKEN;
+  // Pasted values often carry a stray space or line break, which would make
+  // every signature check fail; they are trimmed.
+  const accessToken = env.WHATSAPP_ACCESS_TOKEN?.trim();
+  const phoneNumberId = env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const appSecret = env.WHATSAPP_APP_SECRET?.trim();
+  const verifyToken = env.WHATSAPP_VERIFY_TOKEN?.trim();
   if (!accessToken || !phoneNumberId || !appSecret || !verifyToken) return null;
   const apiVersion = /^v\d+\.\d+$/.test(env.WHATSAPP_API_VERSION ?? "")
     ? env.WHATSAPP_API_VERSION!

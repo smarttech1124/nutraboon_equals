@@ -73,6 +73,10 @@ describe("WhatsApp webhook route (ADR-087)", () => {
     );
     expect(wrong.status).toBe(401);
     expect(afterTasks).toHaveLength(0);
+    const reasons = vi
+      .mocked(console.warn)
+      .mock.calls.map((c) => JSON.parse(String(c[0])).reason as string);
+    expect(reasons).toEqual(["missing", "mismatch"]);
   });
 
   it("acknowledges a signed post at once and handles messages afterwards", async () => {

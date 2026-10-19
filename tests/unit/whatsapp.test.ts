@@ -35,6 +35,11 @@ describe("WhatsApp configuration and signatures (ADR-087)", () => {
     expect(getWhatsAppConfig({ ...ENV, WHATSAPP_API_VERSION: "latest" })!.apiVersion).toBe("v25.0");
   });
 
+  it("trims stray spaces and line breaks from pasted settings", () => {
+    const config = getWhatsAppConfig({ ...ENV, WHATSAPP_APP_SECRET: " app-secret\n" })!;
+    expect(config.appSecret).toBe("app-secret");
+  });
+
   it("accepts only bodies signed with the app secret", () => {
     const body = '{"object":"whatsapp_business_account"}';
     const sig = `sha256=${createHmac("sha256", "app-secret").update(body).digest("hex")}`;

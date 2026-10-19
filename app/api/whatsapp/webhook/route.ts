@@ -49,8 +49,16 @@ export async function POST(request: Request): Promise<Response> {
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) return new Response("Too large", { status: 413 });
   // The signature is checked on the raw bytes before anything is parsed.
-  if (!validSignature(raw, request.headers.get("x-hub-signature-256"), config.appSecret)) {
-    console.warn(JSON.stringify({ event: "whatsapp_bad_signature" }));
+  const signature = request.headers.get("x-hub-signature-256");
+  if (!validSignature(raw, signature, config.appSecret)) {
+    // "missing": not from Meta (or a proxy dropped the header).
+    // "mismatch": from Meta, but WHATSAPP_APP_SECRET is not this app's secret.
+    console.warn(
+      JSON.stringify({
+        event: "whatsapp_bad_signature",
+        reason: signature ? "mismatch" : "missing",
+      }),
+    );
     return new Response("Invalid signature", { status: 401 });
   }
   let body: unknown;
