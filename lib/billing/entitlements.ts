@@ -61,6 +61,30 @@ export const ENTITLEMENTS = {
     description: "Plan for a goal in your own words, beyond the standard goals.",
     freeDefault: false,
   },
+  "chatHistory.enabled": {
+    kind: "flag",
+    label: "Chat history",
+    description:
+      "Signed-in users can save chats, see them in History and continue them later (ADR-090).",
+    freeDefault: true,
+  },
+  "chatHistory.maxSaved": {
+    kind: "number",
+    label: "Saved chats",
+    description:
+      "How many chats a user can keep at once. At the limit, new chats work but are not saved until one is deleted.",
+    freeDefault: 3,
+    min: 0,
+    max: 10000,
+  },
+  "chatHistory.retentionDays": {
+    kind: "number",
+    label: "Keep saved chats for (days unused)",
+    description: "A saved chat is deleted after this many days without a new message.",
+    freeDefault: 30,
+    min: 1,
+    max: 3650,
+  },
   "vendor.listing": {
     kind: "flag",
     label: "Products recommended to users",

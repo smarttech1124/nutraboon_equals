@@ -57,6 +57,8 @@ To add another AI provider, implement `AIProvider` (`lib/ai/types.ts`) in a new 
 | `npm run dev:all`                                | Site and admin app together (3000 and 3001); Ctrl+C stops both                                                                                                                                |
 | `npm run demo:record`                            | Records the product demo video with Playwright ([DEMO_README.md](docs/DEMO_README.md))                                                                                                        |
 | `npm run demo:polish`                            | Turns the newest recording into a captioned MP4 with chapters (needs ffmpeg)                                                                                                                  |
+| `npm run whatsapp:setup`                         | Sets the WhatsApp command menu, ice breakers and business profile ([whatsapp.md](docs/whatsapp.md))                                                                                           |
+| `npm run whatsapp:videos`                        | Copies the two WhatsApp sign-language demo videos into Cloudinary and checks them                                                                                                             |
 | `npm run typecheck:admin`, `npm run build:admin` | Type-check and build n-equals                                                                                                                                                                 |
 
 ## Status
@@ -191,6 +193,8 @@ Users see these facts in plain language at `/privacy` (ADR-053), which also name
 | Saved AI provider keys (admin page)                                                                                   | `AIProviderConfig` table, AES-256-GCM encrypted; only a masked hint is ever shown                                                               | Until an admin deletes the key; the audit log (metadata only) is kept                                       |
 | Voice (optional)                                                                                                      | The browser's speech service: in Chrome and Edge, recognition audio goes to the browser vendor                                                  | Not stored by Nutraboom Equals; only the transcript the user sends is processed                             |
 | WhatsApp contacts (when enabled)                                                                                      | `WhatsAppContact` (an HMAC of the phone number, consent, conversation ID) and `WhatsAppMessage` (message IDs and delivery statuses, never text) | Messages themselves live in `Conversation` and expire as above (ADR-087)                                    |
+| Saved chats (signed-in users)                                                                                         | `Conversation` rows with the owner (`userId`) and a title                                                                                       | Until the user deletes them, or after the plan's days without a new message (free: 30; ADR-090)             |
+| WhatsApp voice notes and videos                                                                                       | Memory only, sent to the speech provider (Gemini or OpenAI)                                                                                     | Never stored; spoken replies are uploaded to WhatsApp, not kept by the app                                  |
 
 Messages are sent to Google Gemini to generate replies. Check Google's terms for your API tier (free-tier data may be used to improve Google's products) before real users arrive.
 
@@ -207,7 +211,7 @@ Messages are sent to Google Gemini to generate replies. Check Google's terms for
   - Each one is branded HTML with a plain-text copy (`lib/email/templates.ts`, ADR-086).
   - Delivery is logged as `email_sent` or `email_failed` with the template and Resend's ID, never the address.
   - `APP_URL` must be the public site: the logo and links use it.
-- **WhatsApp:** people can chat on WhatsApp through Meta's Cloud API (ADR-087). Set the `WHATSAPP_*` variables and register `<APP_URL>/api/whatsapp/webhook`. Full setup, consent and testing steps are in [docs/whatsapp.md](docs/whatsapp.md).
+- **WhatsApp:** people can chat on WhatsApp through Meta's Cloud API (ADR-087). Set the `WHATSAPP_*` variables and register `<APP_URL>/api/whatsapp/webhook`. Voice notes are transcribed and can be answered by voice, and people can send HELP, RESET, SIGN ON / SIGN OFF, VOICE ON / OFF and VIDEO ON / OFF (ADR-090). Full setup, consent, commands and testing steps are in [docs/whatsapp.md](docs/whatsapp.md).
 
 ## Voice
 

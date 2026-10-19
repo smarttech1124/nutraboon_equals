@@ -52,6 +52,7 @@ describe("entitlement parsing", () => {
         "mealPlanner.maxDays": 7,
         "mealPlanner.shoppingList": true,
         "mealPlanner.customObjectives": false,
+        "chatHistory.enabled": false,
         "vendor.listing": false,
         "hospital.listing": false,
         "nutritionist.listing": false,

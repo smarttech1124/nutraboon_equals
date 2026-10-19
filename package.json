@@ -31,7 +31,9 @@
     "admin:create": "tsx scripts/admin-create.ts",
     "eval:conversations": "tsx scripts/eval/conversations.ts",
     "demo:record": "tsx scripts/demo/record-demo.ts",
-    "demo:polish": "tsx scripts/demo/polish-demo.ts"
+    "demo:polish": "tsx scripts/demo/polish-demo.ts",
+    "whatsapp:setup": "tsx scripts/whatsapp/setup-profile.ts",
+    "whatsapp:videos": "tsx scripts/whatsapp/upload-demo-videos.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.132.1",

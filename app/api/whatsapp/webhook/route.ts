@@ -3,7 +3,10 @@ import { getPrisma } from "@/lib/db";
 import { appUrl } from "@/lib/email";
 import { chatDeps, chatTurnDeps } from "@/lib/http/chat-deps";
 import { RateLimitUnavailableError } from "@/lib/http/rate-limit";
+import { buildSpeechToText, buildTextToSpeech } from "@/lib/speech";
+import { speechKeyFor } from "@/lib/speech/runtime";
 import { CloudApiClient } from "@/lib/whatsapp/client";
+import { whatsappDemoVideos } from "@/lib/whatsapp/demo-videos";
 import { getWhatsAppConfig } from "@/lib/whatsapp/config";
 import { PrismaWhatsAppRepository } from "@/lib/whatsapp/prisma-repository";
 import { handleIncoming, handleStatuses, type WhatsAppDeps } from "@/lib/whatsapp/service";
@@ -17,8 +20,11 @@ import { parseWebhook } from "@/lib/whatsapp/webhook";
  * settings are configured.
  */
 
-/** Replies are generated after Meta gets its 200, within the same function run. */
-export const maxDuration = 60;
+/**
+ * Replies are generated after Meta gets its 200, within the same function
+ * run: a voice note is downloaded, transcribed, answered and spoken back.
+ */
+export const maxDuration = 120;
 
 /** Meta's webhook payloads are small; anything bigger is not from Meta. */
 const MAX_BODY_BYTES = 1_000_000;
@@ -76,6 +82,9 @@ export async function POST(request: Request): Promise<Response> {
     hashSecret: config.hashSecret,
     chat: chatTurnDeps,
     privacyUrl: `${appUrl()}/privacy`,
+    speechToText: () => buildSpeechToText(speechKeyFor),
+    textToSpeech: () => buildTextToSpeech(speechKeyFor),
+    demoVideos: () => whatsappDemoVideos(),
     allow: async (contactId) => {
       try {
         return (await chatDeps.rateLimiter.check(`whatsapp:${contactId}`)).allowed;

@@ -1,7 +1,12 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import type { ChatErrorResponse, ChatResponse, ChatRole } from "@/lib/conversation/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type {
+  ChatErrorResponse,
+  ChatResponse,
+  ChatRole,
+  HistoryStatus,
+} from "@/lib/conversation/types";
 import type { BudgetSummary } from "@/lib/budget/summary";
 import type { LanguageCode } from "@/lib/i18n/languages";
 import type { MealPlan } from "@/lib/meals/plan";
@@ -46,7 +51,43 @@ export type ChatState = {
   messages: UIMessage[];
   isLoading: boolean;
   error?: string;
+  /** From the last reply: whether a signed-in user's chat is saved (ADR-090). */
+  history?: HistoryStatus;
 };
+
+/**
+ * The open conversation is kept in this tab's sessionStorage (ADR-090), so a
+ * reload or moving between pages does not lose it. It never leaves the
+ * device, and closing the tab forgets it.
+ */
+export const SESSION_KEY = "nbe.chat";
+const MAX_SESSION_MESSAGES = 40;
+
+type SessionChat = { conversationId?: string; messages: UIMessage[] };
+
+function readSession(): SessionChat | undefined {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return undefined;
+    const value = JSON.parse(raw) as SessionChat;
+    return Array.isArray(value.messages) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeSession(chat: SessionChat | undefined) {
+  try {
+    if (!chat || chat.messages.length === 0) sessionStorage.removeItem(SESSION_KEY);
+    else
+      sessionStorage.setItem(
+        SESSION_KEY,
+        JSON.stringify({ ...chat, messages: chat.messages.slice(-MAX_SESSION_MESSAGES) }),
+      );
+  } catch {
+    // Storage blocked or full: the chat still works, it just is not restored.
+  }
+}
 
 const FALLBACK_ERROR = "I'm having trouble connecting right now. Please try again in a moment.";
 export const OFFLINE_ERROR =
@@ -56,7 +97,8 @@ export const TIMEOUT_ERROR = "That's taking longer than usual. Please try again.
 export const REQUEST_TIMEOUT_MS = 70_000;
 
 let nextId = 0;
-const makeId = () => `m${++nextId}`;
+// The time part keeps IDs unique across reloads, when restored messages keep their IDs.
+const makeId = () => `m${++nextId}-${Date.now().toString(36)}`;
 
 /**
  * Client chat state. `sendMessage(text)` is the single entry point, so a
@@ -66,10 +108,36 @@ export function useChat(
   fetchImpl: typeof fetch = fetch,
   timeoutMs = REQUEST_TIMEOUT_MS,
   language?: LanguageCode,
+  /** Keep the conversation in sessionStorage (the chat panel does; tests need not). */
+  persist = false,
 ) {
   const [state, setState] = useState<ChatState>({ messages: [], isLoading: false });
   const pendingText = useRef<string | undefined>(undefined);
   const conversationId = useRef<string | undefined>(undefined);
+  const restored = useRef(!persist);
+
+  // Restore after mounting (the server render has no storage), then save on change.
+  useEffect(() => {
+    if (!persist) return;
+    if (!restored.current) {
+      restored.current = true;
+      const saved = readSession();
+      if (saved && saved.messages.length > 0) {
+        // Applied after this render, like an update from any outside store.
+        void Promise.resolve().then(() => {
+          if (conversationId.current) return; // A new chat already started.
+          conversationId.current = saved.conversationId;
+          setState((s) =>
+            s.messages.length > 0
+              ? s
+              : { ...s, conversationId: saved.conversationId, messages: saved.messages },
+          );
+        });
+      }
+      return;
+    }
+    writeSession({ conversationId: state.conversationId, messages: state.messages });
+  }, [persist, state.conversationId, state.messages]);
 
   /** Whether the pending message was spoken, so a retry sends the same mode. */
   const pendingVoice = useRef(false);
@@ -119,6 +187,7 @@ export function useChat(
         setState((s) => ({
           conversationId: data.conversationId,
           isLoading: false,
+          history: data.history,
           messages: [
             ...s.messages,
             {
@@ -184,5 +253,18 @@ export function useChat(
     setState({ messages: [], isLoading: false });
   }, []);
 
-  return { ...state, sendMessage, retry, clear };
+  /** Opens a saved chat (ADR-090): its text messages, continuing the same conversation. */
+  const restore = useCallback((id: string, messages: { role: ChatRole; content: string }[]) => {
+    generation.current++;
+    conversationId.current = id;
+    pendingText.current = undefined;
+    setState({
+      conversationId: id,
+      isLoading: false,
+      history: { saved: true },
+      messages: messages.map((m) => ({ id: makeId(), role: m.role, content: m.content })),
+    });
+  }, []);
+
+  return { ...state, sendMessage, retry, clear, restore };
 }

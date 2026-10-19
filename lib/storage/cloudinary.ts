@@ -156,3 +156,73 @@ export function photoThumbnail(url: string, size = 256): string {
     `/image/upload/c_fill,g_face,w_${size},h_${size},f_auto,q_auto/`,
   );
 }
+
+export type UploadedVideo = {
+  publicId: string;
+  format: string;
+  bytes: number;
+  /** The eager (pre-made) versions, in the order asked for. */
+  eager: { url: string; format: string; bytes: number }[];
+};
+
+/**
+ * Copies a video (a public URL or the file itself) into Cloudinary under a fixed public ID, replacing
+ * any earlier copy, and makes the `eager` versions straight away (ADR-090:
+ * the WhatsApp sign-language demo). Signed like every upload here.
+ */
+export async function uploadVideoFromUrl(
+  config: CloudinaryConfig,
+  input: { source: string | Blob; publicId: string; eager: string },
+  fetchImpl: typeof fetch = fetch,
+  now: () => number = Date.now,
+): Promise<UploadedVideo> {
+  const params = {
+    public_id: input.publicId,
+    overwrite: "true",
+    invalidate: "true",
+    eager: input.eager,
+    eager_async: "false",
+    timestamp: Math.floor(now() / 1000),
+  };
+  const form = new FormData();
+  form.set("file", input.source);
+  for (const [k, v] of Object.entries(params)) form.set(k, String(v));
+  form.set("api_key", config.apiKey);
+  form.set("signature", signParams(params, config.apiSecret));
+  let response: Response;
+  try {
+    response = await fetchImpl(
+      `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/video/upload`,
+      { method: "POST", body: form, signal: AbortSignal.timeout(120_000) },
+    );
+  } catch {
+    throw new CloudinaryError(null);
+  }
+  if (!response.ok) {
+    // Only used by the setup script, where Cloudinary's reason (e.g. a bad
+    // transformation) is needed to fix the problem. It never contains the secret.
+    const reason = (
+      (await response.json().catch(() => null)) as { error?: { message?: string } } | null
+    )?.error?.message;
+    const error = new CloudinaryError(response.status);
+    if (reason) error.message += `: ${reason.slice(0, 300)}`;
+    throw error;
+  }
+  const body = (await response.json()) as {
+    public_id?: string;
+    format?: string;
+    bytes?: number;
+    eager?: { secure_url?: string; format?: string; bytes?: number }[];
+  };
+  if (!body.public_id) throw new CloudinaryError(response.status);
+  return {
+    publicId: body.public_id,
+    format: body.format ?? "",
+    bytes: body.bytes ?? 0,
+    eager: (body.eager ?? []).map((e) => ({
+      url: e.secure_url ?? "",
+      format: e.format ?? "",
+      bytes: e.bytes ?? 0,
+    })),
+  };
+}

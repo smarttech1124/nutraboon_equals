@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChatInput } from "./ChatInput";
 import { useChatPanel } from "./ChatProvider";
 import { ErrorMessage } from "./ErrorMessage";
+import { HistoryView } from "./HistoryView";
 import { MessageList } from "./MessageList";
 import { SettingsView } from "./SettingsView";
 import { SuggestedPrompts } from "./SuggestedPrompts";
@@ -53,6 +54,7 @@ const ICONS = {
   expand: "M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7",
   shrink: "M4 14h6v6M20 10h-6V4M10 14l-7 7M14 10l7-7",
   minimize: "M5 19h14",
+  history: "M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5M12 7v5l3 2",
   settings:
     "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z",
   close: "M6 6l12 12M18 6 6 18",
@@ -128,9 +130,10 @@ export function ChatPanel() {
   const { mode, size, fullScreen, close, minimize, open, toggleSize } = useChatPanel();
   const isOpen = mode === "open";
   const { settings, update } = useSettings();
-  const chat = useChat(undefined, undefined, settings.language);
+  const chat = useChat(undefined, undefined, settings.language, true);
   const voice = useVoice(undefined, settings.language);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const restoreRef = useRef<HTMLButtonElement>(null);
@@ -173,6 +176,7 @@ export function ChatPanel() {
     stopSpeaking();
     chat.clear();
     setShowSettings(false);
+    setShowHistory(false);
     inputRef.current?.focus();
   }
 
@@ -276,9 +280,21 @@ export function ChatPanel() {
             />
             <IconButton label="Minimize chat" icon="minimize" onClick={minimize} />
             <IconButton
+              label="Saved chats"
+              icon="history"
+              onClick={() => {
+                setShowSettings(false);
+                setShowHistory((v) => !v);
+              }}
+              aria-expanded={showHistory}
+            />
+            <IconButton
               label="Settings"
               icon="settings"
-              onClick={() => setShowSettings((v) => !v)}
+              onClick={() => {
+                setShowHistory(false);
+                setShowSettings((v) => !v);
+              }}
               aria-expanded={showSettings}
             />
             <IconButton label="Close chat" icon="close" onClick={close} />
@@ -287,7 +303,24 @@ export function ChatPanel() {
 
         <div className="flex-1 overflow-y-auto px-4 py-5">
           <div className={expanded ? "mx-auto max-w-2xl" : undefined}>
-            {showSettings ? (
+            {showHistory ? (
+              <HistoryView
+                currentId={chat.conversationId}
+                onOpen={(id, messages) => {
+                  stopSpeaking();
+                  chat.restore(id, messages);
+                  setShowHistory(false);
+                  inputRef.current?.focus();
+                }}
+                onDeleted={(id) => {
+                  if (id === chat.conversationId) chat.clear();
+                }}
+                onDone={() => {
+                  setShowHistory(false);
+                  inputRef.current?.focus();
+                }}
+              />
+            ) : showSettings ? (
               <SettingsView
                 settings={settings}
                 onChange={update}
@@ -330,13 +363,40 @@ export function ChatPanel() {
                 }
               />
             )}
-            {chat.error && !showSettings && (
+            {chat.error && !showSettings && !showHistory && (
               <ErrorMessage message={chat.error} onRetry={chat.retry} />
             )}
+            {chat.history?.saved === false &&
+              chat.history.reason === "limit" &&
+              !showSettings &&
+              !showHistory && (
+                <p
+                  role="status"
+                  className="mt-4 rounded-xl bg-brand-soft px-3 py-2 text-sm text-ink"
+                >
+                  This chat isn&apos;t being saved: you have {chat.history.max} saved chats, the
+                  most your plan allows.{" "}
+                  <button
+                    type="button"
+                    onClick={() => setShowHistory(true)}
+                    className="font-medium text-brand-text underline"
+                  >
+                    Manage saved chats
+                  </button>{" "}
+                  or{" "}
+                  <a href="/account/plan" className="font-medium text-brand-text underline">
+                    upgrade
+                  </a>
+                  .
+                </p>
+              )}
           </div>
         </div>
 
-        <div hidden={showSettings} className={expanded ? "mx-auto w-full max-w-2xl" : undefined}>
+        <div
+          hidden={showSettings || showHistory}
+          className={expanded ? "mx-auto w-full max-w-2xl" : undefined}
+        >
           <ChatInput
             ref={inputRef}
             onSend={send}

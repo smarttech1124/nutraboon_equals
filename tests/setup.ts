@@ -8,3 +8,14 @@ if (!process.env.DATABASE_URL_TEST && existsSync(".env.local")) {
   const local = parse(readFileSync(".env.local"));
   if (local.DATABASE_URL_TEST) process.env.DATABASE_URL_TEST = local.DATABASE_URL_TEST;
 }
+
+// The chat keeps the current conversation in sessionStorage (ADR-090); start
+// every test without one.
+import { afterEach } from "vitest";
+afterEach(() => {
+  try {
+    globalThis.sessionStorage?.clear();
+  } catch {
+    // Not a browser environment.
+  }
+});

@@ -24,7 +24,8 @@ const storedIntentSchema = z.enum(INTENTS).catch("unknown");
 /**
  * Conversation state in PostgreSQL, shared by every server instance
  * (ADR-039). Each save slides the 2-hour expiry; expired rows are treated as
- * missing and deleted.
+ * missing and deleted. Saved conversations (ADR-090) have no expiry here;
+ * lib/conversation/history.ts applies their retention.
  */
 export class PrismaConversationStore implements ConversationStore {
   private lastCleanup = Number.NEGATIVE_INFINITY;
@@ -41,7 +42,7 @@ export class PrismaConversationStore implements ConversationStore {
     } catch (error) {
       throw new ConversationStoreError("Could not load conversation", { cause: error });
     }
-    if (!row || row.expiresAt.getTime() <= this.now()) return undefined;
+    if (!row || (row.expiresAt && row.expiresAt.getTime() <= this.now())) return undefined;
 
     const messages = storedMessagesSchema.safeParse(row.messages);
     const profile = storedProfileSchema.safeParse(row.profile);
@@ -56,6 +57,7 @@ export class PrismaConversationStore implements ConversationStore {
       allergies: row.allergies,
       profile: profile.data,
       updatedAt: row.updatedAt.getTime(),
+      ...(row.userId ? { ownerId: row.userId } : {}),
     };
   }
 
@@ -65,7 +67,8 @@ export class PrismaConversationStore implements ConversationStore {
       currentIntent: conversation.currentIntent,
       allergies: conversation.allergies,
       profile: conversation.profile,
-      expiresAt: new Date(this.now() + CONVERSATION_TTL_MS),
+      // A saved conversation keeps no fixed expiry: its owner's plan decides (ADR-090).
+      ...(conversation.ownerId ? {} : { expiresAt: new Date(this.now() + CONVERSATION_TTL_MS) }),
     };
     try {
       await this.prisma.conversation.upsert({

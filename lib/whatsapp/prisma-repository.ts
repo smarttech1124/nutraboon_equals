@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@/lib/generated/prisma/client";
-import type { Contact, WhatsAppRepository } from "./service";
+import type { Contact, VoiceReplies, WhatsAppRepository } from "./service";
 import type { StatusUpdate } from "./webhook";
 
 /** Later statuses never move a message back (Meta can deliver them out of order). */
@@ -35,6 +35,8 @@ export class PrismaWhatsAppRepository implements WhatsAppRepository {
       consent: contact.consent,
       conversationId: contact.conversationId,
       isNew: !existing,
+      voiceReplies: contact.voiceReplies,
+      signVideos: contact.signVideos,
     };
   }
 
@@ -49,6 +51,32 @@ export class PrismaWhatsAppRepository implements WhatsAppRepository {
     await this.prisma.whatsAppContact.update({
       where: { id: contactId },
       data: { conversationId },
+    });
+  }
+
+  async setPreferences(
+    contactId: string,
+    preferences: { voiceReplies?: VoiceReplies; signVideos?: boolean },
+  ): Promise<void> {
+    await this.prisma.whatsAppContact.update({ where: { id: contactId }, data: preferences });
+  }
+
+  async reset(contactId: string, keepMessageId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const contact = await tx.whatsAppContact.findUnique({
+        where: { id: contactId },
+        select: { conversationId: true },
+      });
+      if (!contact) return;
+      // Only a conversation no website account has saved (WhatsApp ones never are).
+      if (contact.conversationId) {
+        await tx.conversation.deleteMany({ where: { id: contact.conversationId, userId: null } });
+      }
+      await tx.whatsAppMessage.deleteMany({ where: { contactId, id: { not: keepMessageId } } });
+      await tx.whatsAppContact.update({
+        where: { id: contactId },
+        data: { conversationId: null, resetAt: new Date() },
+      });
     });
   }
 

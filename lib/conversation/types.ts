@@ -57,6 +57,8 @@ export type Conversation = {
   /** Facts the user has given (household, ages, food at home …); never asked again. */
   profile: UserProfile;
   updatedAt: number;
+  /** The account that saved it (ADR-090); unset for a guest or unsaved chat. */
+  ownerId?: string;
 };
 
 /** Public contract of POST /api/chat (CLAUDE.md §19). */
@@ -93,7 +95,18 @@ export type ChatResponse = {
     /** Reviewed pictures, when the person asked to see something (ADR-085). */
     visuals?: Visual[];
   };
+  /** Whether a signed-in user's chat is kept in their history (ADR-090). */
+  history?: HistoryStatus;
 };
+
+/**
+ * "limit": the plan's saved-chat limit is reached, so this chat is not kept.
+ * "unavailable": the plan does not include chat history.
+ */
+export type HistoryStatus =
+  | { saved: true }
+  | { saved: false; reason: "limit"; max: number }
+  | { saved: false; reason: "unavailable" };
 
 export type ChatErrorResponse = {
   error: {

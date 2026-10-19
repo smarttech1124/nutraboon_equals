@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { AIProviderError, type AIProvider } from "@/lib/ai/types";
 import { handleChat, type SafetyReport } from "@/lib/conversation/orchestrator";
+import type { ChatHistoryService, HistoryPolicy } from "@/lib/conversation/history";
 import { ConversationStoreError, type ConversationStore } from "@/lib/conversation/store";
-import type { ChatErrorResponse } from "@/lib/conversation/types";
+import type { ChatErrorResponse, ChatResponse, HistoryStatus } from "@/lib/conversation/types";
 import type { PriceLookup } from "@/lib/budget/service";
 import type { NutritionLookup } from "@/lib/nutrition/service";
 import { chatRequestSchema, MAX_REQUEST_BYTES } from "@/lib/validation/chat";
@@ -32,7 +33,31 @@ export type ChatHandlerDeps = {
   getProducts?: () => ProductFinder | undefined;
   store: ConversationStore;
   rateLimiter: RateLimiter;
+  /** The signed-in user's ID, or null for a guest (ADR-090). */
+  getViewer?: () => Promise<string | null>;
+  /** Saved chats; needs the database. */
+  history?: ChatHistoryService;
 };
+
+/**
+ * The store as this request may see it (ADR-090): a saved conversation opens
+ * only for its owner, and only while their plan includes history. Anyone else
+ * sending its ID gets a new conversation, never its messages or facts.
+ */
+export function scopedStore(
+  store: ConversationStore,
+  viewerId: string | null,
+  historyEnabled: boolean,
+): ConversationStore {
+  return {
+    get: async (id) => {
+      const conversation = await store.get(id);
+      if (!conversation?.ownerId) return conversation;
+      return conversation.ownerId === viewerId && historyEnabled ? conversation : undefined;
+    },
+    save: (conversation) => store.save(conversation),
+  };
+}
 
 function errorResponse(
   status: number,
@@ -94,6 +119,19 @@ export function createChatHandler(deps: ChatHandlerDeps) {
       return errorResponse(400, "invalid_request", message, requestId);
     }
 
+    // Who is asking, and what their plan allows. A failure here only means
+    // the chat is not saved: it never blocks the answer.
+    let viewerId: string | null = null;
+    let policy: HistoryPolicy | null = null;
+    if (deps.getViewer && deps.history) {
+      try {
+        viewerId = await deps.getViewer();
+        if (viewerId) policy = await deps.history.policy(viewerId);
+      } catch {
+        viewerId = null;
+      }
+    }
+
     const started = performance.now();
     let providerName: string | undefined;
     try {
@@ -115,7 +153,7 @@ export function createChatHandler(deps: ChatHandlerDeps) {
       }
       const result = await handleChat(parsed.data, {
         provider,
-        store: deps.store,
+        store: scopedStore(deps.store, viewerId, policy?.enabled ?? false),
         nutrition,
         prices,
         nutritionists: deps.getNutritionists?.(),
@@ -123,6 +161,14 @@ export function createChatHandler(deps: ChatHandlerDeps) {
         onDegraded: (category) => degraded.push(category),
         onSafety: (report) => (safety = report),
       });
+      let history: HistoryStatus | undefined;
+      if (viewerId && policy && deps.history) {
+        try {
+          history = await deps.history.save(viewerId, result.conversationId, policy);
+        } catch {
+          degraded.push("history_unavailable");
+        }
+      }
 
       logChat({
         requestId,
@@ -135,7 +181,8 @@ export function createChatHandler(deps: ChatHandlerDeps) {
         ...(degraded.length > 0 ? { degraded } : {}),
         ...(safety ? { safety } : {}),
       });
-      return Response.json(result, { headers: { "x-request-id": requestId } });
+      const body: ChatResponse = history ? { ...result, history } : result;
+      return Response.json(body, { headers: { "x-request-id": requestId } });
     } catch (error) {
       const category =
         error instanceof AIProviderError

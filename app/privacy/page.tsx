@@ -68,7 +68,8 @@ export default async function PrivacyPage() {
             <li>
               Your conversation and the facts you shared are stored so the assistant remembers them
               (for example, an allergy). They are{" "}
-              <strong>deleted 2 hours after your last message</strong>.
+              <strong>deleted 2 hours after your last message</strong>, unless you are signed in and
+              the chat is saved to your account (below).
             </li>
             <li>
               To stop abuse, we count requests per connection for about one minute, using a
@@ -90,6 +91,13 @@ export default async function PrivacyPage() {
               <strong>Continue with Google:</strong> Google tells us your name, email address and an
               account number that identifies you to us. We never receive your Google password and do
               not keep Google&apos;s access tokens.
+            </li>
+            <li>
+              <strong>Saved chats:</strong> while you are signed in, your chats with the assistant
+              and the facts you shared in them are saved to your account, up to your plan&apos;s
+              limit, so you can come back to them. Each is deleted when you delete it (under
+              &quot;Saved chats&quot; in the chat) or after a period without new messages that your
+              plan sets (30 days on the free plan).
             </li>
             <li>
               <strong>Meal Planner:</strong> your planning conversation and the facts it records
@@ -154,7 +162,10 @@ export default async function PrivacyPage() {
             Meta&apos;s WhatsApp service and are answered the same way. We keep a coded version of
             your phone number (not the number itself) to continue your conversation, and delivery
             receipts. The conversation is kept for the same limited time as a chat on this website.
-            Reply STOP to stop messages at any time.
+            If you send a <strong>voice note or video</strong>, it is turned into text by Google
+            (Gemini) or OpenAI and then deleted: we never keep the recording. If you ask for voice
+            replies, the reply text is turned into speech by OpenAI. Reply RESET to make us forget
+            the conversation, and SIGN OFF (or STOP) to stop messages at any time.
           </p>
           <p>
             Pictures shown with some replies are loaded from Wikimedia Commons, which sees that your
@@ -167,6 +178,10 @@ export default async function PrivacyPage() {
             Your chosen reply language is saved in your browser only, so the chat remembers it. You
             can change it in the chat&apos;s settings, or clear it by clearing this site&apos;s data
             in your browser.
+          </p>
+          <p>
+            The chat you have open is kept in this browser tab only, so reloading the page does not
+            lose it. Closing the tab or starting a new chat removes it.
           </p>
         </Section>
 

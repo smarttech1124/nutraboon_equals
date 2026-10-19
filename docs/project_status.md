@@ -97,6 +97,22 @@ From [project_requirements.md §15](project_requirements.md). "Live" means check
 - **Claude (ADR-059):** an AI provider by environment variable or in n-equals. Tested with a fake client only.
 - **Built since:** phases B to E (below). Not built: the N-ATLaS speech recognition server (ADR-069).
 
+### WhatsApp voice, video and commands; saved chats (19 October 2026)
+
+- **WhatsApp (ADR-090):**
+  - Voice notes and videos are transcribed (Gemini, then OpenAI), with "I heard: …" before the answer.
+  - Spoken replies come from OpenAI: by default to voice notes, or VOICE ON / VOICE OFF.
+  - VIDEO ON sends one of two sign-language demo videos from Cloudinary (`npm run whatsapp:videos`).
+  - Commands: HELP, SIGN ON / SIGN OFF, RESET.
+  - `npm run whatsapp:setup` sets the command menu, ice breakers and business profile.
+- **Speech providers:** `lib/speech/` is modular. Claude is listed, but it has no audio input.
+- **Saved chats:**
+  - Signed-in users' chats are saved, and listed, reopened and deleted from "Saved chats" in the chat panel.
+  - The open chat survives a reload (sessionStorage).
+  - The free tier gets 3 saved chats, kept 30 days unused. The limits are configurable per plan in n-equals.
+- **Database:** the `chat_history_whatsapp_media` migration (Vercel production builds apply it; apply it to any other database with `npm run db:deploy` before running this code). A daily cron, `/api/cron/conversations`, applies retention.
+- **Set up on 19 October 2026:** both WhatsApp demo videos are in Cloudinary and checked (MP4, about 0.4 MB each).
+
 ### Partner portals and hospital onboarding (16 October 2026)
 
 - **Portals (ADR-089):** hospital, vendor and nutritionist portals have their own frame and login pages (`/hospital/sign-in`, `/vendor/sign-in`, `/nutritionist/sign-in`), with no public navigation, and work before their public directory is switched on.

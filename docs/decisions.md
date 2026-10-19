@@ -1250,3 +1250,39 @@ Recording the chat exposed a safety-check bug.
 - **n-equals:** the vendor, hospital and subscription status filters show counts, like the nutritionist page ("Needs review (1)", "Verified (5)").
 
 **Consequence:** partners work in a portal that only shows their tools, hospitals can join and get ready before launch, and no staff member sees patient information before the hospital is verified. The migration `membership_activation` keeps every existing member active.
+
+## ADR-090 — WhatsApp Voice, Video and Commands; Saved Website Chats With Plan Limits (2026-10-19)
+
+**Context:** WhatsApp answered text only, and a voice note got "please type". The sign-language demo existed only on the website. There were no WhatsApp commands beyond STOP and START, and no way to forget a conversation. On the website, a chat was lost after 2 hours or a reload, and people could not come back to earlier chats. Plans had no setting for any of this.
+
+**Decision:**
+
+- **Voice notes and videos on WhatsApp:**
+  - Incoming `audio` and `video` messages are downloaded through the Graph API (two steps, only from Meta's media host). Only WhatsApp's own types are accepted (AAC, AMR, MP3, MP4 audio, OGG/Opus; MP4 and 3GPP video), up to 16 MB, checked before and after downloading.
+  - A server speech-to-text provider transcribes it. The person sees "I heard: …" before the answer, as on the website, so a misheard word can be corrected. The chat then runs in voice mode. Recordings are kept in memory only and never stored or logged.
+- **Speech providers (`lib/speech/`):** one interface each for speech to text and text to speech, a registry, and a fallback chain.
+  - Gemini (inline audio) and OpenAI (`gpt-4o-mini-transcribe`) transcribe, tried in the order of `SPEECH_TO_TEXT_PROVIDERS`. "No speech" is final; any other failure moves to the next provider.
+  - OpenAI makes spoken replies (MP3, which WhatsApp plays as audio).
+  - **Claude is registered but cannot be used:** the Claude API reads text, images and PDFs, not audio. Adding a provider is one file plus a registry entry.
+  - Keys are the AI keys the app already has: the environment variable, else the active key saved in n-equals for the same provider. n-equals → Audio shows the chain and which providers have a key.
+- **Spoken replies:** by default a voice note gets a voice reply and typed messages get text. VOICE ON and VOICE OFF change this per person (`WhatsAppContact.voiceReplies`). The text is always sent too; a failed voice reply never stops it.
+- **Sign-language demo on WhatsApp:** VIDEO ON sends one of exactly two sample videos (Nigerian Sign Language) after each reply, with the website's demo notice and the licence credit in the caption. WhatsApp plays only H.264/AAC MP4 up to 16 MB, and the originals are WebM. `npm run whatsapp:videos` therefore copies the two into Cloudinary under fixed public IDs and checks the MP4 Meta will fetch (type and size). Both videos are CC BY-SA 4.0, which allows sharing copies with credit; this changes ADR-077's "played from Wikimedia, not rehosted" for these two only.
+- **Commands:** HELP, SIGN ON / SIGN OFF (opt in and out, with START and STOP kept), RESET, VOICE ON / OFF and VIDEO ON / OFF.
+  - A message counts as a command only when it is exactly the command; a leading "/" is accepted.
+  - Every command is confirmed. Opt-out is stored and enforced on every later message.
+  - RESET deletes that contact's conversation (never one saved to a website account) and their message records, except the RESET itself so a retry is still recognised.
+  - Commands act only on the contact the signed webhook names.
+- **Native WhatsApp features versus the app's:** WhatsApp has no per-chat description or instructions like Telegram, and a business cannot clear a person's chat on their phone. The native parts set by `npm run whatsapp:setup` are the business profile (About, description, website, category), the "/" command menu and four ice breakers. Command handling, consent, RESET and the welcome are the app's. The table is in `docs/whatsapp.md`.
+- **Saved chats on the website:**
+  - A signed-in user's chat is saved to their account (`Conversation.userId`, `title`; no fixed expiry) when their plan includes chat history and they are under their limit.
+  - "Saved chats" in the chat panel lists, reopens (text messages, the same conversation and its facts) and deletes them (`/api/conversations`, `/api/conversations/[id]`).
+  - The open chat is also kept in the tab's sessionStorage, for guests too, so a reload does not lose it. Guests' chats are never saved on the server (2 hours, ADR-039).
+- **Access control:** the chat API only continues a saved conversation for its owner, and only while their plan includes history; anyone else sending its ID gets a new conversation. Every history query names the owner, and other people's chats answer 404.
+- **Plan limits (entitlements, configurable in n-equals per plan and for the free tier):**
+  - `chatHistory.enabled` (free: on), `chatHistory.maxSaved` (free: 3) and `chatHistory.retentionDays` (free: 30).
+  - The limit counts **total saved chats**. At the limit, a new chat still works but is not saved. The panel says so, with "Manage saved chats" and "upgrade".
+  - Claims are serialised per user with a PostgreSQL advisory lock, so two tabs cannot both take the last slot.
+  - Plan changes apply at the next request: after a downgrade nothing is deleted and saved chats can still be continued, but new ones are not saved until under the limit. Without history in the plan, saved chats stay listed for deletion but cannot be opened. An expired subscription falls back to the free tier.
+  - Retention counts days without a new message. It is applied when the list is read and by a daily cron (`/api/cron/conversations`).
+
+**Consequence:** WhatsApp users can speak instead of typing, hear answers, try the sign-language demo and control their data with simple commands. Website users can leave and come back to their chats, within limits administrators set without code. New processors: Google (Gemini) and OpenAI for WhatsApp speech, named in the privacy notice. Migration: `chat_history_whatsapp_media`.

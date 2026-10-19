@@ -1,4 +1,11 @@
 import { getChatProvider } from "@/lib/ai/settings/runtime";
+import { currentUser } from "@/lib/auth/next";
+import { getEntitlementService } from "@/lib/billing";
+import {
+  ChatHistoryService,
+  historyPolicy,
+  PrismaHistoryRepository,
+} from "@/lib/conversation/history";
 import { PrismaPriceRepository } from "@/lib/budget/prisma-repository";
 import { PriceService } from "@/lib/budget/service";
 import { PrismaConversationStore } from "@/lib/conversation/prisma-store";
@@ -44,6 +51,18 @@ const rateLimiter: RateLimiter = process.env.DATABASE_URL
   : new InMemoryRateLimiter(CHAT_RATE_LIMIT.limit, CHAT_RATE_LIMIT.windowMs);
 let prices: PriceService | undefined;
 
+const shared = globalThis as unknown as { chatHistory?: ChatHistoryService };
+
+/** Saved chats (ADR-090), with limits from the user's plan; needs the database. */
+export function getChatHistory(): ChatHistoryService | undefined {
+  if (!process.env.DATABASE_URL) return undefined;
+  shared.chatHistory ??= new ChatHistoryService(
+    new PrismaHistoryRepository(getPrisma()),
+    async (userId) => historyPolicy(await getEntitlementService().entitlementsFor({ userId })),
+  );
+  return shared.chatHistory;
+}
+
 /**
  * Everything a chat turn needs, shared by the website chat (/api/chat) and
  * WhatsApp (ADR-087), so both get the same data, limits and safety checks.
@@ -84,6 +103,11 @@ export const chatDeps: ChatHandlerDeps = {
   },
   store,
   rateLimiter,
+  getViewer: async () =>
+    process.env.DATABASE_URL ? ((await currentUser("web"))?.id ?? null) : null,
+  get history() {
+    return getChatHistory();
+  },
 };
 
 /**

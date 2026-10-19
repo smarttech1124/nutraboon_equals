@@ -140,9 +140,12 @@ model PriceEstimate {
 
 /// Chat state for one conversation (ADR-039). Holds raw messages and personal
 /// facts (ages, pregnancy, allergies), so rows expire after 2 hours of
-/// inactivity and are deleted (CLAUDE.md §28).
+/// inactivity and are deleted (CLAUDE.md §28). A conversation a signed-in
+/// user saved (ADR-090) has an owner and no fixed expiry: it is kept until
+/// the user deletes it or it is unused for longer than their plan's
+/// chatHistory.retentionDays.
 model Conversation {
-  id            String   @id
+  id            String    @id
   /// [{ role: "user" | "assistant", content: string }], newest last, capped.
   messages      Json
   currentIntent String
@@ -150,11 +153,18 @@ model Conversation {
   allergies     String[]
   /// Known user facts (lib/conversation/profile.ts UserProfile).
   profile       Json
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  expiresAt     DateTime
+  /// The account that saved this conversation; null for unsaved (guest) chats.
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Shown in the history list: the start of the first question.
+  title         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  /// Null for saved conversations (retention is applied from the owner's plan).
+  expiresAt     DateTime?
 
   @@index([expiresAt])
+  @@index([userId, updatedAt])
 }
 
 /// One fixed rate-limit window per client (ADR-040). `key` is an HMAC of the
@@ -304,6 +314,7 @@ model User {
   hospitalAppointments HospitalAppointment[] @relation("PatientAppointments")
   accessConversations  AccessConversation[]  @relation("PatientConversations")
   oauthAccounts        OAuthAccount[]
+  conversations        Conversation[]
 }
 
 enum SessionApp {
@@ -1041,6 +1052,16 @@ enum WhatsAppConsent {
   opted_out
 }
 
+/// When replies also come as a voice message (ADR-090).
+enum WhatsAppVoiceReplies {
+  /// Only to a voice note.
+  auto
+  /// To every message (VOICE ON).
+  always
+  /// Never (VOICE OFF).
+  never
+}
+
 enum WhatsAppDirection {
   inbound
   outbound
@@ -1051,14 +1072,20 @@ enum WhatsAppDirection {
 /// continue their conversation. Replies use the number from each incoming
 /// message.
 model WhatsAppContact {
-  id             String            @id @default(uuid())
-  waIdHash       String            @unique
-  consent        WhatsAppConsent   @default(opted_in)
+  id             String               @id @default(uuid())
+  waIdHash       String               @unique
+  consent        WhatsAppConsent      @default(opted_in)
   /// The chat conversation (Conversation.id) this person is in, if still kept.
   conversationId String?
-  firstSeenAt    DateTime          @default(now())
-  lastInboundAt  DateTime          @default(now())
+  firstSeenAt    DateTime             @default(now())
+  lastInboundAt  DateTime             @default(now())
   optedOutAt     DateTime?
+  /// Voice replies (VOICE ON / VOICE OFF).
+  voiceReplies   WhatsAppVoiceReplies @default(auto)
+  /// The sign-language demo video after each reply (VIDEO ON / VIDEO OFF).
+  signVideos     Boolean              @default(false)
+  /// When the person last sent RESET.
+  resetAt        DateTime?
   messages       WhatsAppMessage[]
 }
 

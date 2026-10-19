@@ -1,6 +1,7 @@
 /**
  * Runs the PostgreSQL integration tests (tests/integration/food-db.test.ts and
- * tests/integration/ai-settings-db.test.ts, tests/integration/demo-seed-db.test.ts), one file at a time.
+ * tests/integration/ai-settings-db.test.ts, tests/integration/demo-seed-db.test.ts,
+ * tests/integration/chat-history-db.test.ts), one file at a time.
  *
  * Uses DATABASE_URL_TEST if set; otherwise derives it from DATABASE_URL by
  * switching the database name to "<name>_test" on the same server. Prisma
@@ -37,6 +38,7 @@ const result = spawnSync(
     "tests/integration/food-db.test.ts",
     "tests/integration/ai-settings-db.test.ts",
     "tests/integration/demo-seed-db.test.ts",
+    "tests/integration/chat-history-db.test.ts",
   ],
   {
     stdio: "inherit",
