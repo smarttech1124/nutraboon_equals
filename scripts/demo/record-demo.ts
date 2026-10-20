@@ -5,7 +5,10 @@
  *   DEMO_BASE_URL=http://localhost:3000 npm run demo:record
  *
  * Optional segments, each only when its settings are given:
- *   DEMO_EMAIL / DEMO_PASSWORD              sign in as a dedicated demo member
+ *   DEMO_EMAIL / DEMO_PASSWORD              sign in as a dedicated demo member, then
+ *                                           message a hospital as that patient
+ *   DEMO_HOSPITAL_EMAIL                     the hospital staff account that replies
+ *                                           (default demo-hospital-ikeja@example.test)
  *   DEMO_ADMIN_URL / DEMO_ADMIN_EMAIL / DEMO_ADMIN_PASSWORD   n-equals tour (read-only;
  *                                           the password defaults to DEMO_PASSWORD)
  *   DEMO_HEADED=1                           show the browser while recording
@@ -17,7 +20,8 @@
  * Exits with code 1 when a required step fails.
  *
  * The tour only reads pages, except: the chat sends two messages (an anonymous
- * conversation that expires like any other) and signing in starts sessions.
+ * conversation that expires like any other), signing in starts sessions, and
+ * the hospital chapters send one patient message and one staff reply.
  * Use dedicated demo accounts, never a real person's.
  */
 import { spawnSync } from "node:child_process";
@@ -61,6 +65,11 @@ const BASE_URL = (env("DEMO_BASE_URL") ?? "https://nutraboom-equals.vercel.app")
 const ADMIN_URL = env("DEMO_ADMIN_URL")?.replace(/\/$/, "");
 /** Multiplies every pause: 0.5 for a quick check, 1.5 for a slower video. */
 const PACE = Number(env("DEMO_PACE") ?? "1") || 1;
+
+/** How long to wait for a reply: an AI answer plus, on a dev server, the first compile. */
+const REPLY_TIMEOUT_MS = 120_000;
+/** Times the chat's Retry is pressed after an error before a step fails. */
+const MAX_RETRIES = 2;
 
 const pause = (page: Page, ms: number) => page.waitForTimeout(Math.round(ms * PACE));
 
@@ -236,19 +245,27 @@ async function askAssistant(demo: Demo, dialog: Locator, message: string): Promi
   await demo.typeInto(input, message);
   await pause(demo.page, 500);
   await demo.click(dialog.getByRole("button", { name: "Send" }));
-  const outcome = await Promise.race([
-    replies
-      .nth(before)
-      .waitFor({ state: "attached", timeout: 60_000 })
-      .then(() => "reply" as const),
-    dialog
-      .getByRole("alert")
-      .filter({ hasText: /trouble|try again/i })
-      .first()
-      .waitFor({ timeout: 60_000 })
-      .then(() => "error" as const),
-  ]);
-  if (outcome === "error") throw new Error("The assistant showed its error message");
+  const alert = dialog
+    .getByRole("alert")
+    .filter({ hasText: /trouble|try again/i })
+    .first();
+  // The AI provider can be briefly overloaded: use the chat's own Retry, as a
+  // person would, before giving up on the step.
+  for (let attempt = 0; ; attempt++) {
+    const outcome = await Promise.race([
+      replies
+        .nth(before)
+        .waitFor({ state: "attached", timeout: REPLY_TIMEOUT_MS })
+        .then(() => "reply" as const),
+      alert.waitFor({ timeout: REPLY_TIMEOUT_MS }).then(() => "error" as const),
+    ]);
+    if (outcome === "reply") break;
+    if (attempt >= MAX_RETRIES) throw new Error("The assistant showed its error message");
+    console.log(`    retrying "${message.slice(0, 40)}" after the assistant's error`);
+    await pause(demo.page, 2000);
+    await demo.click(alert.getByRole("button", { name: "Retry" }));
+    await alert.waitFor({ state: "detached", timeout: 10_000 }).catch(() => {});
+  }
   await dialog
     .getByRole("log")
     .getByRole("status")
@@ -451,10 +468,11 @@ async function featureTour(demo: Demo): Promise<void> {
     await demo.click(player.getByRole("button", { name: "Show another demo video" }));
     await player.getByRole("button", { name: "Replay" }).waitFor({ timeout: 45_000 });
     await pause(page, 3500);
+    await demo.caption(
+      "Sign-language responses stay on for the rest of this demo, including hospital messages.",
+      2800,
+    );
     await demo.clearCaption();
-    await inSettings(demo, dialog, async () => {
-      await demo.click(dialog.getByRole("checkbox", { name: /Sign language response/ }));
-    });
   });
 
   // 5. Voice: speak a question, hear the reply
@@ -486,7 +504,7 @@ async function featureTour(demo: Demo): Promise<void> {
     const replies = dialog.getByText("Nutraboom Equals said:", { exact: true });
     const before = await replies.count();
     await demo.click(dialog.getByRole("button", { name: "Send" }));
-    await replies.nth(before).waitFor({ state: "attached", timeout: 60_000 });
+    await replies.nth(before).waitFor({ state: "attached", timeout: REPLY_TIMEOUT_MS });
     const stop = dialog.getByRole("button", { name: "Stop reading this reply" });
     await stop.waitFor({ timeout: 10_000 });
     await demo.caption(
@@ -577,7 +595,9 @@ async function memberTour(demo: Demo, email: string, password: string): Promise<
     // The password is typed without the visible cursor animation and never logged.
     await page.getByLabel("Password", { exact: true }).fill(password);
     await demo.click(page.getByRole("button", { name: /^(Log in|Sign in)$/ }));
-    await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"));
+    await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), {
+      timeout: REPLY_TIMEOUT_MS,
+    });
     await demo.goto("/account");
     const heading = page.getByRole("heading", { level: 1 }).first();
     await heading.waitFor();
@@ -586,6 +606,134 @@ async function memberTour(demo: Demo, email: string, password: string): Promise<
     );
     await demo.highlight(heading, "Account dashboard");
     await demo.scroll(1);
+    await demo.clearCaption();
+  });
+}
+
+const PATIENT_MESSAGE =
+  "Hello. I'm 20 weeks pregnant and often feel tired. Can I speak to someone about what to eat?";
+const STAFF_REPLY =
+  "Good afternoon, this is the antenatal nutrition clinic. We can see you on Thursday at 10am. Please bring your antenatal card. Until then, keep eating beans, leafy greens such as ugu, and eggs.";
+
+/** Signs out of the main site (both portals share its session cookie) without leaving the page. */
+async function signOut(demo: Demo): Promise<void> {
+  await demo.page.context().clearCookies({ name: "nbe_session" });
+}
+
+/** Signs in on a login page (personal or portal) and waits to leave it. */
+async function signInOn(demo: Demo, urlPath: string, email: string, password: string) {
+  await demo.goto(urlPath);
+  await demo.typeInto(demo.page.getByLabel("Email"), email);
+  // The password is typed without the visible cursor animation and never logged.
+  await demo.page.getByLabel("Password", { exact: true }).fill(password);
+  await demo.click(demo.page.getByRole("button", { name: /^(Log in|Sign in)$/ }));
+  await demo.page.waitForURL((url) => !url.pathname.endsWith("/sign-in"), {
+    timeout: REPLY_TIMEOUT_MS,
+  });
+}
+
+/**
+ * A patient messages a hospital and its staff reply (ADR-068), with the
+ * patient's sign-language responses on: the staff reply arrives with the
+ * demo sign-language video. Needs the demo seed's member and hospital owner.
+ */
+async function hospitalConversationTour(
+  demo: Demo,
+  patientEmail: string,
+  staffEmail: string,
+  password: string,
+): Promise<void> {
+  const page = demo.page;
+  let conversationUrl = "";
+
+  await demo.step("Patient messages a hospital", false, async () => {
+    await demo.goto("/hospitals");
+    await demo.chapter("Message a hospital", "A patient and hospital staff, by text or voice");
+    const hospital = page
+      .locator("main a[href^='/hospitals/']")
+      .filter({ hasText: "Harmony Specialist Hospital" })
+      .first();
+    await demo.caption("Amaka, a patient, opens a hospital that offers text and audio access.");
+    await demo.click(hospital);
+    await page.waitForURL(/\/hospitals\/[^/]+$/, { timeout: REPLY_TIMEOUT_MS });
+    await settle(page);
+    // The booking form has its own note field, so the message box is found by its ID.
+    const box = page.locator("#first-message");
+    await box.waitFor({ timeout: REPLY_TIMEOUT_MS });
+    await box.scrollIntoViewIfNeeded();
+    await demo.caption("She types her question. The assistant passes it to the right clinic.");
+    await demo.typeInto(box, PATIENT_MESSAGE);
+    await pause(page, 600);
+    await demo.click(page.getByRole("button", { name: "Send to the hospital" }));
+    await page.waitForURL(/\/hospitals\/messages\//, { timeout: REPLY_TIMEOUT_MS });
+    await settle(page);
+    conversationUrl = new URL(page.url()).pathname;
+    // Her sign-language responses must be on, so staff replies come with a video.
+    const toggle = page.getByRole("checkbox", { name: /Sign language response/ });
+    if (!(await toggle.isChecked())) await demo.click(toggle);
+    await demo.caption("Sign-language responses (demo) are on for her replies.", 2400);
+    await demo.highlight(toggle.locator("xpath=ancestor::label[1]"), "Sign language: on", 1800);
+    await demo.highlight(
+      page.getByRole("list", { name: "Conversation" }),
+      "Her conversation",
+      2400,
+    );
+    await demo.clearCaption();
+  });
+  if (!conversationUrl) return;
+
+  await demo.step("Hospital staff reply", false, async () => {
+    await demo.chapter("Hospital staff", "The hospital portal's inbox");
+    await demo.caption("Now the hospital's side: a staff member logs in to the hospital portal.");
+    await signOut(demo);
+    await signInOn(demo, "/hospital/sign-in", staffEmail, password);
+    await demo.goto("/hospital/inbox");
+    const thread = page
+      .locator("main a[href^='/hospital/inbox/']")
+      .filter({ hasText: "Amaka" })
+      .first();
+    await demo.caption("New messages wait in the inbox, sorted and labelled by the assistant.");
+    await demo.highlight(thread, "Amaka's message", 2400);
+    await demo.click(thread);
+    await page.waitForURL(/\/hospital\/inbox\/[^/]+$/, { timeout: REPLY_TIMEOUT_MS });
+    await settle(page);
+    const claim = page.getByRole("button", { name: "I'll handle this" });
+    if (await claim.isVisible().catch(() => false)) {
+      await demo.click(claim);
+      await page.getByText(/Handled by you/).waitFor();
+    }
+    const reply = page.getByLabel("Your reply to the patient");
+    await demo.caption("The staff member replies in plain words.");
+    await demo.typeInto(reply, STAFF_REPLY);
+    await demo.click(page.getByRole("button", { name: "Send", exact: true }));
+    await page
+      .getByRole("list", { name: "Conversation" })
+      .getByText(STAFF_REPLY.slice(0, 40))
+      .waitFor({ timeout: 20_000 });
+    await pause(page, 1200);
+    await demo.clearCaption();
+  });
+
+  await demo.step("Patient sees the reply with sign language", false, async () => {
+    await demo.chapter("The reply", "Text, read aloud, and a sign-language video (demo)");
+    await signOut(demo);
+    await signInOn(demo, "/sign-in", patientEmail, password);
+    await demo.goto(conversationUrl);
+    const staffMessage = page
+      .getByRole("list", { name: "Conversation" })
+      .getByRole("listitem")
+      .filter({ hasText: STAFF_REPLY.slice(0, 40) })
+      .last();
+    await staffMessage.waitFor({ timeout: 20_000 });
+    const player = staffMessage.getByRole("region", { name: /Sign language response/ });
+    await player.getByRole("button", { name: "Replay" }).waitFor({ timeout: 45_000 });
+    await staffMessage.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "smooth" }));
+    await demo.caption(
+      "Amaka sees the staff reply with a sample sign-language video. Demo mode: it does not translate the reply.",
+      4200,
+    );
+    await demo.highlight(player, "Sign language response (demo)", 4000);
+    await demo.caption("She can also have it read aloud, or reply by speaking.", 2600);
     await demo.clearCaption();
   });
 }
@@ -725,7 +873,11 @@ async function main(): Promise<void> {
     await featureTour(demo);
     const email = env("DEMO_EMAIL");
     const password = env("DEMO_PASSWORD");
-    if (email && password) await memberTour(demo, email, password);
+    if (email && password) {
+      await memberTour(demo, email, password);
+      const staffEmail = env("DEMO_HOSPITAL_EMAIL") ?? "demo-hospital-ikeja@example.test";
+      await hospitalConversationTour(demo, email, staffEmail, password);
+    }
     const adminEmail = env("DEMO_ADMIN_EMAIL");
     // The demo seed gives every demo account DEMO_PASSWORD, the administrator included.
     const adminPassword = env("DEMO_ADMIN_PASSWORD") ?? password;
