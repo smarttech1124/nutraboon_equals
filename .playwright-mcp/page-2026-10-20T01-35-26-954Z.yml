@@ -1,0 +1,121 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "Ajofly home" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - text: Ajofly.
+      - navigation "Main" [ref=e6]:
+        - link "Flights" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - link "My trips" [ref=e37] [cursor=pointer]:
+          - /url: /trips
+        - link "Support" [ref=e8] [cursor=pointer]:
+          - /url: /support
+        - button "Sign out" [ref=e39]
+  - main [ref=e10]:
+    - note [ref=e40]:
+      - generic [ref=e41]:
+        - strong [ref=e42]: Demo data.
+        - text: These fares are generated samples from fictional carriers, not live airline inventory. Nothing booked here is a real reservation.
+    - generic [ref=e44]:
+      - paragraph [ref=e45]: Flights · Trips · Travel services
+      - heading "Every journey, considered from the first search to the last mile." [level=1] [ref=e46]
+      - paragraph [ref=e47]: Live fares, transparent conditions and one place to manage your trips. Together, We Go Further.
+    - form "Search flights" [ref=e49]:
+      - group "Trip type" [ref=e50]:
+        - generic [ref=e52] [cursor=pointer]:
+          - radio "Return" [checked] [ref=e53]
+          - text: Return
+        - generic [ref=e54] [cursor=pointer]:
+          - radio "One way" [ref=e55]
+          - text: One way
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - generic [ref=e58]: From
+          - combobox "From" [ref=e59]
+        - generic [ref=e60]:
+          - generic [ref=e61]: To
+          - combobox "To" [ref=e62]
+        - generic [ref=e63]:
+          - generic [ref=e64]: Depart
+          - textbox "Depart" [ref=e65]: 2026-11-10
+        - generic [ref=e66]:
+          - generic [ref=e67]: Return
+          - textbox "Return" [ref=e68]: 2026-11-17
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - generic [ref=e71]: Adults (12+)
+          - combobox "Adults (12+)" [ref=e72]:
+            - option "1" [selected]
+            - option "2"
+            - option "3"
+            - option "4"
+            - option "5"
+            - option "6"
+            - option "7"
+            - option "8"
+            - option "9"
+        - generic [ref=e73]:
+          - generic [ref=e74]: Children (2–11)
+          - combobox "Children (2–11)" [ref=e75]:
+            - option "0" [selected]
+            - option "1"
+            - option "2"
+            - option "3"
+            - option "4"
+            - option "5"
+            - option "6"
+            - option "7"
+            - option "8"
+        - generic [ref=e76]:
+          - generic [ref=e77]: Infants (under 2)
+          - combobox "Infants (under 2)" [ref=e78]:
+            - option "0" [selected]
+            - option "1"
+            - option "2"
+            - option "3"
+            - option "4"
+        - generic [ref=e79]:
+          - generic [ref=e80]: Cabin
+          - combobox "Cabin" [ref=e81]:
+            - option "Economy" [selected]
+            - option "Premium economy"
+            - option "Business"
+            - option "First"
+        - generic [ref=e82]:
+          - generic [ref=e83]: Currency
+          - combobox "Currency" [ref=e84]:
+            - option "USD" [selected]
+            - option "GBP"
+            - option "EUR"
+            - option "NGN"
+        - generic [ref=e85]:
+          - checkbox "Non-stop only" [ref=e86]
+          - text: Non-stop only
+      - button "Search flights" [ref=e88]
+    - generic [ref=e89]:
+      - generic [ref=e90]:
+        - heading "Prices you can trust" [level=2] [ref=e91]
+        - paragraph [ref=e92]: Every fare is re-confirmed with the airline before you pay. If it moves, you see the change and decide.
+      - generic [ref=e93]:
+        - heading "Conditions in plain view" [level=2] [ref=e94]
+        - paragraph [ref=e95]: Change and cancellation rules come straight from the fare, shown before you commit, not after.
+      - generic [ref=e96]:
+        - heading "Your trips in one place" [level=2] [ref=e97]
+        - paragraph [ref=e98]: Reservation, ticket and status for every booking, with updates by email as things happen.
+  - contentinfo [ref=e28]:
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - paragraph [ref=e31]: Ajofly.
+        - paragraph [ref=e32]: Together, We Go Further.
+      - navigation "Footer" [ref=e33]:
+        - link "Support" [ref=e34] [cursor=pointer]:
+          - /url: /support
+        - link "Privacy" [ref=e35] [cursor=pointer]:
+          - /url: /legal/privacy
+        - link "Terms" [ref=e36] [cursor=pointer]:
+          - /url: /legal/terms
+  - button "Open Next.js Dev Tools" [ref=e104] [cursor=pointer]
+  - alert [ref=e108]: Ajofly | Flights and travel, handled with care

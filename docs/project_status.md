@@ -110,7 +110,7 @@ From [project_requirements.md §15](project_requirements.md). "Live" means check
   - Signed-in users' chats are saved, and listed, reopened and deleted from "Saved chats" in the chat panel.
   - The open chat survives a reload (sessionStorage).
   - The free tier gets 3 saved chats, kept 30 days unused. The limits are configurable per plan in n-equals.
-- **Database:** the `chat_history_whatsapp_media` migration (Vercel production builds apply it; apply it to any other database with `npm run db:deploy` before running this code). A daily cron, `/api/cron/conversations`, applies retention.
+- **Database:** the `chat_history_whatsapp_media` migration (applied to the configured database on 20 October 2026; Vercel production builds apply it too). A daily cron, `/api/cron/conversations`, applies retention.
 - **Set up on 19 October 2026:** both WhatsApp demo videos are in Cloudinary and checked (MP4, about 0.4 MB each).
 
 ### Partner portals and hospital onboarding (16 October 2026)

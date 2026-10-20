@@ -1,0 +1,154 @@
+- generic [ref=f4e1]:
+  - link "Skip to content" [ref=f4e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=f4e3]:
+    - generic [ref=f4e4]:
+      - link "Ajofly home" [ref=f4e5] [cursor=pointer]:
+        - /url: /
+        - text: Ajofly.
+      - navigation "Main" [ref=f4e6]:
+        - link "Plan a trip" [ref=f4e7] [cursor=pointer]:
+          - /url: /plan
+        - group [ref=f4e8]:
+          - generic "Services" [ref=f4e9] [cursor=pointer]:
+            - text: Services
+            - generic [aria-hidden] [ref=f4e10]: ▾
+        - link "My trips" [ref=f4e11] [cursor=pointer]:
+          - /url: /trips
+        - link "Support" [ref=f4e12] [cursor=pointer]:
+          - /url: /support
+        - link "Operations" [ref=f4e13] [cursor=pointer]:
+          - /url: /admin
+      - generic [ref=f4e14]:
+        - group [ref=f4e15]:
+          - generic "Account menu" [ref=f4e16] [cursor=pointer]:
+            - generic [aria-hidden] [ref=f4e17]: O
+        - link "Ask Ajofly" [ref=f4e19] [cursor=pointer]:
+          - /url: /plan
+  - main [ref=f4e20]:
+    - generic [ref=f4e21]:
+      - paragraph [ref=f4e22]:
+        - link "Charter requests" [ref=f4e23] [cursor=pointer]:
+          - /url: /admin/charter
+      - generic [ref=f4e24]:
+        - heading "CH-HJHNZX" [level=1] [ref=f4e25]
+        - generic [ref=f4e26]: New inquiry
+      - navigation "Operations sections" [ref=f4e27]:
+        - link "Overview" [ref=f4e28] [cursor=pointer]:
+          - /url: /admin
+        - link "Visas" [ref=f4e29] [cursor=pointer]:
+          - /url: /admin/visas
+        - link "Charter" [ref=f4e30] [cursor=pointer]:
+          - /url: /admin/charter
+        - link "Transfers, concierge, insurance" [ref=f4e31] [cursor=pointer]:
+          - /url: /admin/requests
+      - generic [ref=f4e32]:
+        - generic [ref=f4e33]:
+          - generic [ref=f4e34]:
+            - heading "Request" [level=2] [ref=f4e35]
+            - list [ref=f4e36]:
+              - listitem [ref=f4e37]:
+                - generic [ref=f4e38]: LOS → ACC
+                - generic [ref=f4e39]: 2026-11-09
+              - listitem [ref=f4e40]:
+                - generic [ref=f4e41]: ACC → LOS
+                - generic [ref=f4e42]: 2026-11-12
+            - generic [ref=f4e44]:
+              - generic [ref=f4e45]:
+                - term [ref=f4e46]: Customer
+                - definition [ref=f4e47]:
+                  - text: Walk Customer
+                  - generic [ref=f4e48]: staff-walk-customer@example.test
+              - generic [ref=f4e49]:
+                - term [ref=f4e50]: Passengers
+                - definition [ref=f4e51]: "4"
+              - generic [ref=f4e52]:
+                - term [ref=f4e53]: Aircraft preference
+                - definition [ref=f4e54]: Midsize jet
+              - generic [ref=f4e55]:
+                - term [ref=f4e56]: Received
+                - definition [ref=f4e57]: 2026-10-20 13:00
+            - generic [ref=f4e58]:
+              - paragraph [ref=f4e59]: Special requests
+              - paragraph [ref=f4e60]: Pet on board
+          - generic [ref=f4e61]:
+            - heading "Quotes" [level=2] [ref=f4e62]
+            - paragraph [ref=f4e63]: No quotes yet.
+        - complementary [ref=f4e64]:
+          - generic [ref=f4e65]:
+            - heading "Add an operator quote" [level=2] [ref=f4e66]
+            - paragraph [ref=f4e67]: No approved charter operators yet. Register one below first.
+          - group [ref=f4e68]:
+            - generic "Register a charter operator" [active] [ref=f4e69] [cursor=pointer]
+            - paragraph [ref=f4e113]: Only add an operator the business has vetted (AOC and insurance checked). It is created as an approved vendor.
+            - generic [ref=f4e114]:
+              - generic [ref=f4e115]:
+                - generic [ref=f4e116]: Legal name
+                - textbox "Legal name" [ref=f4e117]
+              - generic [ref=f4e118]:
+                - generic [ref=f4e119]: Name shown to customers
+                - textbox "Name shown to customers" [ref=f4e120]
+              - generic [ref=f4e121]:
+                - generic [ref=f4e122]: Contact email
+                - textbox "Contact email" [ref=f4e123]
+              - generic [ref=f4e124]:
+                - generic [ref=f4e125]: AOC number (optional)
+                - textbox "AOC number (optional)" [ref=f4e126]
+              - button "Register operator" [ref=f4e127]
+  - contentinfo [ref=f4e70]:
+    - generic [ref=f4e71]:
+      - generic [ref=f4e72]:
+        - paragraph [ref=f4e73]: Ajofly.
+        - paragraph [ref=f4e74]: Together, We Go Further.
+        - paragraph [ref=f4e75]: Flights, membership and premium travel services, arranged with care and confirmed only when the airline or provider confirms them.
+      - navigation "Travel" [ref=f4e76]:
+        - paragraph [ref=f4e77]: Travel
+        - list [ref=f4e78]:
+          - listitem [ref=f4e79]:
+            - link "Plan a trip" [ref=f4e80] [cursor=pointer]:
+              - /url: /plan
+          - listitem [ref=f4e81]:
+            - link "My trips" [ref=f4e82] [cursor=pointer]:
+              - /url: /trips
+          - listitem [ref=f4e83]:
+            - link "Membership" [ref=f4e84] [cursor=pointer]:
+              - /url: /butler
+      - navigation "Services" [ref=f4e85]:
+        - paragraph [ref=f4e86]: Services
+        - list [ref=f4e87]:
+          - listitem [ref=f4e88]:
+            - link "Visa services" [ref=f4e89] [cursor=pointer]:
+              - /url: /visas
+          - listitem [ref=f4e90]:
+            - link "Private jet charter" [ref=f4e91] [cursor=pointer]:
+              - /url: /charter
+          - listitem [ref=f4e92]:
+            - link "Airport transfers" [ref=f4e93] [cursor=pointer]:
+              - /url: /transfers
+          - listitem [ref=f4e94]:
+            - link "Personal concierge" [ref=f4e95] [cursor=pointer]:
+              - /url: /concierge
+          - listitem [ref=f4e96]:
+            - link "Travel insurance" [ref=f4e97] [cursor=pointer]:
+              - /url: /insurance
+      - navigation "Company" [ref=f4e98]:
+        - paragraph [ref=f4e99]: Help
+        - list [ref=f4e100]:
+          - listitem [ref=f4e101]:
+            - link "Support" [ref=f4e102] [cursor=pointer]:
+              - /url: /support
+          - listitem [ref=f4e103]:
+            - link "Account security" [ref=f4e104] [cursor=pointer]:
+              - /url: /account/security
+          - listitem [ref=f4e105]:
+            - link "Privacy" [ref=f4e106] [cursor=pointer]:
+              - /url: /legal/privacy
+          - listitem [ref=f4e107]:
+            - link "Terms" [ref=f4e108] [cursor=pointer]:
+              - /url: /legal/terms
+          - listitem [ref=f4e109]:
+            - link "Photo credits" [ref=f4e110] [cursor=pointer]:
+              - /url: /credits
+    - paragraph [ref=f4e112]: © 2026 Ajofly. All rights reserved.
+  - button "Open Next.js Dev Tools" [ref=f4e133] [cursor=pointer]
+  - alert [ref=f4e137]

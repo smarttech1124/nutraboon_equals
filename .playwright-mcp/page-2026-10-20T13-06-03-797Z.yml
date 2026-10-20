@@ -1,0 +1,85 @@
+- generic [active] [ref=f6e1]:
+  - link "Skip to content" [ref=f6e2] [cursor=pointer]:
+    - /url: "#main"
+  - banner [ref=f6e3]:
+    - generic [ref=f6e4]:
+      - link "Ajofly home" [ref=f6e5] [cursor=pointer]:
+        - /url: /
+        - text: Ajofly.
+      - navigation "Main" [ref=f6e6]:
+        - link "Plan a trip" [ref=f6e7] [cursor=pointer]:
+          - /url: /plan
+        - group [ref=f6e8]:
+          - generic "Services" [ref=f6e9] [cursor=pointer]:
+            - text: Services
+            - generic [aria-hidden] [ref=f6e10]: ▾
+        - link "My trips" [ref=f6e11] [cursor=pointer]:
+          - /url: /trips
+        - link "Support" [ref=f6e12] [cursor=pointer]:
+          - /url: /support
+        - link "Operations" [ref=f6e13] [cursor=pointer]:
+          - /url: /admin
+      - generic [ref=f6e14]:
+        - group [ref=f6e15]:
+          - generic "Account menu" [ref=f6e16] [cursor=pointer]:
+            - generic [aria-hidden] [ref=f6e17]: O
+        - link "Ask Ajofly" [ref=f6e19] [cursor=pointer]:
+          - /url: /plan
+  - main [ref=f6e20]
+  - contentinfo [ref=f6e56]:
+    - generic [ref=f6e57]:
+      - generic [ref=f6e58]:
+        - paragraph [ref=f6e59]: Ajofly.
+        - paragraph [ref=f6e60]: Together, We Go Further.
+        - paragraph [ref=f6e61]: Flights, membership and premium travel services, arranged with care and confirmed only when the airline or provider confirms them.
+      - navigation "Travel" [ref=f6e62]:
+        - paragraph [ref=f6e63]: Travel
+        - list [ref=f6e64]:
+          - listitem [ref=f6e65]:
+            - link "Plan a trip" [ref=f6e66] [cursor=pointer]:
+              - /url: /plan
+          - listitem [ref=f6e67]:
+            - link "My trips" [ref=f6e68] [cursor=pointer]:
+              - /url: /trips
+          - listitem [ref=f6e69]:
+            - link "Membership" [ref=f6e70] [cursor=pointer]:
+              - /url: /butler
+      - navigation "Services" [ref=f6e71]:
+        - paragraph [ref=f6e72]: Services
+        - list [ref=f6e73]:
+          - listitem [ref=f6e74]:
+            - link "Visa services" [ref=f6e75] [cursor=pointer]:
+              - /url: /visas
+          - listitem [ref=f6e76]:
+            - link "Private jet charter" [ref=f6e77] [cursor=pointer]:
+              - /url: /charter
+          - listitem [ref=f6e78]:
+            - link "Airport transfers" [ref=f6e79] [cursor=pointer]:
+              - /url: /transfers
+          - listitem [ref=f6e80]:
+            - link "Personal concierge" [ref=f6e81] [cursor=pointer]:
+              - /url: /concierge
+          - listitem [ref=f6e82]:
+            - link "Travel insurance" [ref=f6e83] [cursor=pointer]:
+              - /url: /insurance
+      - navigation "Company" [ref=f6e84]:
+        - paragraph [ref=f6e85]: Help
+        - list [ref=f6e86]:
+          - listitem [ref=f6e87]:
+            - link "Support" [ref=f6e88] [cursor=pointer]:
+              - /url: /support
+          - listitem [ref=f6e89]:
+            - link "Account security" [ref=f6e90] [cursor=pointer]:
+              - /url: /account/security
+          - listitem [ref=f6e91]:
+            - link "Privacy" [ref=f6e92] [cursor=pointer]:
+              - /url: /legal/privacy
+          - listitem [ref=f6e93]:
+            - link "Terms" [ref=f6e94] [cursor=pointer]:
+              - /url: /legal/terms
+          - listitem [ref=f6e95]:
+            - link "Photo credits" [ref=f6e96] [cursor=pointer]:
+              - /url: /credits
+    - paragraph [ref=f6e98]: © 2026 Ajofly. All rights reserved.
+  - button "Open Next.js Dev Tools" [ref=f6e104] [cursor=pointer]
+  - alert [ref=f6e108]

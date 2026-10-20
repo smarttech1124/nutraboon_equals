@@ -1,0 +1,2 @@
+[     407ms] [VERBOSE] [DOM] Password forms should have (optionally hidden) username fields for accessibility: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3100/reset-password?token=Ys_dKM56AUXoMsQ579E5DetU9TS2tgru6c-L6Lb_dlg:0
+[     975ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(app-pages-browser)/../../../../../../../../Documents/Clients/AJOfly/node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:25630
