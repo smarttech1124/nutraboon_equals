@@ -8,7 +8,7 @@ import { allowAttempt, getAuthService } from "@/lib/auth/next";
 import { isAdminRole, ROLE_LABEL } from "@/lib/auth/permissions";
 import { emailSchema, passwordSchema } from "@/lib/auth/service";
 import { getPrisma } from "@/lib/db";
-import { getEmailSender } from "@/lib/email";
+import { adminAppUrl, appUrl, getEmailSender } from "@/lib/email";
 import { resetPasswordMessage } from "@/lib/email/templates";
 
 /**
@@ -201,7 +201,10 @@ export async function resetAdminPasswordAction(
       targetId: userId,
     });
     try {
-      await sender.send({ to: result.email, ...resetPasswordMessage(result.token) });
+      await sender.send({
+        to: result.email,
+        ...resetPasswordMessage(result.token, appUrl(), adminAppUrl()),
+      });
     } catch {
       return {
         status: "error",

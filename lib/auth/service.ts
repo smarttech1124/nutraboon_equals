@@ -262,7 +262,23 @@ export class AuthService {
     return this.issueToken(user.id, "reset_password");
   }
 
-  async resetPassword(token: string, password: string): Promise<AuthResult<object>> {
+  /**
+   * "Forgot your password?" on n-equals sign-in (ADR-091): like
+   * requestPasswordReset, but only for active accounts with an admin role, so
+   * the admin form cannot be used to send reset emails to ordinary users.
+   */
+  async requestAdminPasswordReset(
+    rawEmail: string,
+  ): Promise<{ token: string; email: string } | null> {
+    const email = emailSchema.safeParse(rawEmail);
+    if (!email.success) return null;
+    const user = await this.repo.findUserByEmail(email.data);
+    if (!user || user.status !== "active") return null;
+    if ((await this.repo.adminRoles(user.id)).length === 0) return null;
+    return { token: await this.issueToken(user.id, "reset_password"), email: user.email };
+  }
+
+  async resetPassword(token: string, password: string): Promise<AuthResult<{ userId: string }>> {
     const parsed = passwordSchema.safeParse(password);
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]!.message };
     const used = await this.repo.consumeToken(hashToken(token), "reset_password", this.now());
@@ -270,7 +286,7 @@ export class AuthService {
     await this.repo.updatePassword(used.userId, await hashPassword(parsed.data));
     // Anyone signed in with the old password is signed out.
     await this.repo.deleteUserSessions(used.userId);
-    return { ok: true };
+    return { ok: true, userId: used.userId };
   }
 
   /**

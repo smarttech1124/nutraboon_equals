@@ -143,7 +143,12 @@ export function verifyEmailMessage(token: string, site = appUrl()): RenderedEmai
   );
 }
 
-export function resetPasswordMessage(token: string, site = appUrl()): RenderedEmail {
+/** `linkBase` is the app whose reset page the link opens (n-equals for administrators). */
+export function resetPasswordMessage(
+  token: string,
+  site = appUrl(),
+  linkBase = site,
+): RenderedEmail {
   return render(
     {
       template: "reset_password",
@@ -153,7 +158,7 @@ export function resetPasswordMessage(token: string, site = appUrl()): RenderedEm
       paragraphs: ["Someone asked to reset the password for your Nutraboom Equals account."],
       action: {
         label: "Choose a new password",
-        url: `${site}/reset-password?token=${encodeURIComponent(token)}`,
+        url: `${linkBase}/reset-password?token=${encodeURIComponent(token)}`,
       },
       note: "The link works once and expires in 1 hour. If you did not ask for this, ignore this email: your password stays the same.",
     },

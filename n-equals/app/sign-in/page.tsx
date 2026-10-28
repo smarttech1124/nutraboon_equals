@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminLogo } from "@admin/components/logo";
 import { Card } from "@/components/ui";
@@ -16,6 +17,11 @@ export default async function AdminSignInPage() {
       <Card title="n-equals" description="Nutraboom Equals administration. Administrators only.">
         <AdminSignInForm action={signInAction} />
       </Card>
+      <p className="text-center text-sm">
+        <Link href="/forgot-password" className="text-brand-text underline">
+          Forgot your password?
+        </Link>
+      </p>
     </main>
   );
 }

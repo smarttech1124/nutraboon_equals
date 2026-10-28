@@ -273,6 +273,7 @@ All variables are listed with comments in `.env.example`. Copy it to `.env.local
 | `DATABASE_URL`, `DIRECT_DATABASE_URL`                                                                                                                                 | PostgreSQL; the direct URL is used for migrations when the main one is pooled                                                          |
 | `DATABASE_URL_TEST`                                                                                                                                                   | A separate test database (its name must contain `test`)                                                                                |
 | `APP_URL`                                                                                                                                                             | The public site address, for email links, payment returns and Google sign-in                                                           |
+| `ADMIN_APP_URL`                                                                                                                                                       | The public n-equals address, used in administrators' password-reset links (optional; defaults to `APP_URL`)                            |
 | `RATE_LIMIT_SECRET`                                                                                                                                                   | Hashing client addresses in the rate-limit table                                                                                       |
 | `AI_CREDENTIALS_KEY`                                                                                                                                                  | Encrypting AI keys saved in n-equals. Back it up and never change it once keys are saved                                               |
 | `RESEND_API_KEY`, `EMAIL_FROM`                                                                                                                                        | Email (confirmation, password reset, notifications). Without them, development logs emails and production reports email as unavailable |
@@ -419,6 +420,16 @@ The action is refused in four cases:
 - the target is the actor's own account (use My profile instead);
 - the target is not an administrator;
 - the target is suspended.
+
+### Administrator forgot password
+
+**Forgot your password?** on the n-equals sign-in page lets an administrator reset their own password:
+
+1. They enter their email. The reply is the same whether or not the address belongs to an administrator, and only active administrator accounts are sent a link.
+2. The one-time link expires after 1 hour. It opens the n-equals reset page when `ADMIN_APP_URL` is set, otherwise the main site's reset page.
+3. The new password must meet the policy (at least 10 characters). Saving it ends every session of the account.
+
+Requests and resets are rate-limited, and a completed reset is recorded in the audit log.
 
 ### Other safeguards
 

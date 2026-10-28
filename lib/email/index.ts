@@ -133,3 +133,11 @@ export function getEmailSender(env: Record<string, string | undefined> = process
 export function appUrl(env: Record<string, string | undefined> = process.env): string {
   return (env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
 }
+
+/**
+ * Where administrators' reset links point: n-equals when ADMIN_APP_URL is set,
+ * else the main site, whose reset page works for every account (ADR-091).
+ */
+export function adminAppUrl(env: Record<string, string | undefined> = process.env): string {
+  return env.ADMIN_APP_URL ? env.ADMIN_APP_URL.replace(/\/$/, "") : appUrl(env);
+}
