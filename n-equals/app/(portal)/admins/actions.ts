@@ -4,9 +4,12 @@ import { revalidatePath } from "next/cache";
 import { asAdmin, FAILED, type ActionState } from "@admin/lib/access";
 import { hashPassword } from "@/lib/admin/password";
 import { recordAudit } from "@/lib/audit";
+import { allowAttempt, getAuthService } from "@/lib/auth/next";
 import { isAdminRole, ROLE_LABEL } from "@/lib/auth/permissions";
 import { emailSchema, passwordSchema } from "@/lib/auth/service";
 import { getPrisma } from "@/lib/db";
+import { getEmailSender } from "@/lib/email";
+import { resetPasswordMessage } from "@/lib/email/templates";
 
 /**
  * Administrator accounts (ADR-061, ADR-080). Every action needs
@@ -159,6 +162,58 @@ export async function addAdminAction(
       message: created
         ? `Account created with the ${ROLE_LABEL[role]} role. Share the temporary password privately.`
         : `${ROLE_LABEL[role]} role added.`,
+    };
+  });
+}
+
+/**
+ * Starts a password reset for another administrator (needs "roles.manage").
+ * The acting administrator re-enters their own password. The target's
+ * password and sessions stop working at once, and a one-hour reset link is
+ * emailed to the target's own address. The link, token and any password are
+ * never shown in n-equals or written to the audit log.
+ */
+export async function resetAdminPasswordAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const userId = field(formData, "userId");
+  if (!userId) return { status: "error", message: "Choose an administrator." };
+  const password = field(formData, "password").slice(0, 200);
+  if (!password) return { status: "error", message: "Enter your own password to confirm." };
+  if (!(await allowAttempt("reset", "admin"))) {
+    return { status: "error", message: "Too many attempts. Wait a while and try again." };
+  }
+  const sender = getEmailSender();
+  if (!sender.available) {
+    return {
+      status: "error",
+      message: "Email is not set up, so a reset link can't be sent. Nothing was changed.",
+    };
+  }
+  return asAdmin("roles.manage", "admin_password_reset", async (admin) => {
+    const result = await getAuthService().adminPasswordReset(admin.id, password, userId);
+    if (!result.ok) return { status: "error", message: result.error };
+    await recordAudit({
+      actorUserId: admin.id,
+      action: "admin_password.reset",
+      targetType: "user",
+      targetId: userId,
+    });
+    try {
+      await sender.send({ to: result.email, ...resetPasswordMessage(result.token) });
+    } catch {
+      return {
+        status: "error",
+        message:
+          "Their password was blocked and they were signed out, but the email could not be sent. Try again to send a new link.",
+      };
+    }
+    refresh();
+    return {
+      status: "success",
+      message:
+        "Done. Their old password no longer works, they were signed out everywhere, and a reset link (valid for 1 hour) was emailed to them.",
     };
   });
 }

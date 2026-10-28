@@ -127,7 +127,11 @@ export function HistoryView({
       {load.status === "error" && (
         <p className="text-sm text-ink">
           Your saved chats couldn&apos;t be loaded.{" "}
-          <button type="button" onClick={() => void refresh()} className="text-brand-text underline">
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="text-brand-text underline"
+          >
             Try again
           </button>
         </p>

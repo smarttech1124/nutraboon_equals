@@ -17,6 +17,8 @@ export type AdminRole = (typeof ADMIN_ROLES)[number];
 
 export const PERMISSIONS = [
   "users.read",
+  /** Per-account activity (ADR-091): counts and dates, never message text. */
+  "users.activity",
   "users.manage",
   "users.delete",
   "roles.manage",
@@ -49,6 +51,7 @@ const ROLE_PERMISSIONS: Record<AdminRole, readonly Permission[]> = {
   super_admin: PERMISSIONS,
   platform_admin: [
     "users.read",
+    "users.activity",
     "users.manage",
     "users.delete",
     "ai.manage",
@@ -62,7 +65,7 @@ const ROLE_PERMISSIONS: Record<AdminRole, readonly Permission[]> = {
   nutritionist_admin: ["users.read", "nutritionists.verify", "audit.read"],
   vendor_admin: ["users.read", "vendors.verify", "audit.read"],
   hospital_admin: ["users.read", "hospitals.verify", "audit.read"],
-  support_admin: ["users.read", "subscriptions.read", "audit.read"],
+  support_admin: ["users.read", "users.activity", "subscriptions.read", "audit.read"],
   finance_admin: [
     "plans.read",
     "plans.manage",

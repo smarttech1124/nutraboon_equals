@@ -1,4 +1,4 @@
-# Checks every push and pull request (docs/project_status.md, "CI pipeline").
+# Checks every push and pull request.
 name: CI
 
 on:
@@ -60,7 +60,10 @@ jobs:
       - name: Formatting
         run: npm run format:check
 
+      # tests/ is not part of the shared repository (.gitignore), so the suite
+      # runs only in a checkout that has it.
       - name: Tests (unit, integration, UI, safety, PostgreSQL)
+        if: hashFiles('tests/**/*.test.ts', 'tests/**/*.test.tsx') != ''
         run: npm test
 
       - name: Production build

@@ -10,6 +10,7 @@ import { signOutAction } from "../sign-in/actions";
 const SECTIONS: (NavItem & { permission?: Permission })[] = [
   { href: "/", label: "Overview" },
   { href: "/users", label: "Platform users", permission: "users.read" },
+  { href: "/activity", label: "User activity", permission: "users.activity" },
   { href: "/admins", label: "Administrators", permission: "users.read" },
   { href: "/nutritionists", label: "Nutritionists", permission: "nutritionists.verify" },
   { href: "/vendors", label: "Vendors", permission: "vendors.verify" },

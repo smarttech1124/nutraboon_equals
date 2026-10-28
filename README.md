@@ -1,218 +1,483 @@
 # Nutraboom Equals
 
-A conversational nutrition assistant for Nigeria. Ask about foods, plan meals, and eat within your budget.
+Nutraboom Equals ("Equals") is a conversational nutrition assistant built first for people in Nigeria. People ask about food, plan meals for their household and cook within a budget, in plain language, on the website or on WhatsApp. Around the assistant sit a meal planner, directories of verified nutritionists, food vendors and hospitals, and the administration app **n-equals**.
 
-**Status:** see [`project_status.md`](docs/project_status.md) for what is built and what is left.
+> Equals gives general nutrition information. It is not medical advice and does not replace a doctor, dietitian or antenatal care.
 
-Read [`CLAUDE.md`](docs/CLAUDE.md), [`project_requirements.md`](docs/project_requirements.md), [`architecture.md`](docs/architecture.md) and [`decisions.md`](docs/decisions.md) before making changes.
+## Contents
 
-## Getting started
+- [Project overview](#project-overview)
+- [Problem statement](#problem-statement)
+- [Goals and objectives](#goals-and-objectives)
+- [Core features](#core-features)
+- [Accessibility](#accessibility)
+- [Target users and use cases](#target-users-and-use-cases)
+- [Technology stack and architecture](#technology-stack-and-architecture)
+- [Installation and setup](#installation-and-setup)
+- [Configuration](#configuration)
+- [Available scripts](#available-scripts)
+- [Deployment](#deployment)
+- [Security and administration](#security-and-administration)
+- [Privacy and data](#privacy-and-data)
+- [Roadmap and future improvements](#roadmap-and-future-improvements)
+- [Repository contents](#repository-contents)
 
-Requires Node.js 22+.
+## Project overview
+
+**What it is.** A web app (Next.js) whose centre is a chat assistant. You open the home page, press **Ask Nutraboom Equals** and start typing or speaking. There is no form to fill in first. The assistant asks only what it needs, one question at a time.
+
+**Who it serves.**
+
+- Households planning meals.
+- People on a tight food budget.
+- Parents of young children.
+- Pregnant women.
+- People with allergies or a diet-related condition who want general guidance.
+- Deaf, hard-of-hearing, blind and low-vision people, through text, voice and sign-language features.
+
+Nutritionists, food vendors and hospitals can also join and be listed.
+
+**Core value.** "I can ask this assistant about food, meals and my food budget", with answers based on Nigerian foods and prices. The app itself supplies the nutrition figures, prices and arithmetic: they come from documented data and code, not from the AI's memory.
+
+## Problem statement
+
+Equals was built for these gaps:
+
+- **Nutrition advice rarely fits Nigerian kitchens.** Most apps and food databases are built around foods, portions and prices from elsewhere. Garri, yam, beans, plantain and local market prices are missing, or are treated as exceptions.
+- **Budgets are tight and prices change.** Families need to know what they can cook with ₦2,000 and the food already at home. A generic diet plan does not answer that.
+- **Professional help is hard to reach.** Dietitians and nutritionists are few and expensive, and many people do not know who is qualified. Going to a hospital means finding one, booking, and being able to communicate with staff.
+- **AI chatbots invent things.** A general chatbot can make up calorie counts and prices. It can also give unsafe advice about pregnancy, infant feeding, allergies or medication.
+- **Access barriers.** Literacy, language, disability, cost and the need to install an app all shut people out. WhatsApp is already on most phones.
+
+## Goals and objectives
+
+- Make reliable, practical nutrition information easy to get, in conversation, on the web and on WhatsApp.
+- Help households plan meals and shopping within a stated budget, using what they already have first.
+- Be safe by design:
+  - recognise pregnancy, children under 5, allergies, medical conditions and medication questions;
+  - stay general in those cases;
+  - refer people to a qualified professional when needed.
+- Never present an estimate as a fact. Nutrition values come from a documented food table, and prices are labelled estimates with their source and date.
+- Connect people with verified nutritionists, vendors and hospitals.
+- Be usable by disabled people from the start, rather than adding accessibility later.
+
+## Core features
+
+Everything below is implemented in this repository. Some modules are switched off by default and must be turned on in n-equals under **Settings** (marked "feature flag").
+
+### Assistant (website)
+
+- **Chat panel:**
+  - opens from the home page or from any page through the global assistant button;
+  - shows loading and error states, with a Retry button;
+  - offers suggested prompts and submits with Enter.
+- **Food information:** serving size, energy and main nutrients for foods in the seed table. Figures come from the FAO/INFOODS West African Food Composition Table (2019), with serving sizes from USDA FoodData Central. For other foods, the assistant describes them without quoting figures.
+- **Meal planning:** asks progressively (who, ages, allergies, what is at home) and then gives a meal plan. The app checks the plan before showing it.
+- **Budget planning:**
+  - asks what food is at home before spending;
+  - produces a shopping list priced from NBS Selected Food Price Watch estimates (May 2026);
+  - shows the estimated total and the money left;
+  - all arithmetic is done by code.
+- **Safety layer:**
+  - **Allergies:** stored for the conversation, excluded from suggestions and mentioned when an item is left out.
+  - **Sensitive contexts:** child-under-5, infant and pregnancy rules; condition and medication handling. The assistant may repeat a dose the user stated but never suggests or changes one.
+  - **Emergencies:** the urgent-care notice gives 112.
+- **Outcome cards:** structured results (plan, budget, food facts) calculated by the app.
+- **Visual explanations:** pictures with alt text and captions.
+- **Reply language:** English, plus Yorùbá and Igbo (Beta).
+- **Voice:**
+  - speak a question in browsers with speech recognition (Chrome, Edge, Safari);
+  - the words appear as text to check before sending;
+  - replies are read aloud for spoken questions, or with **Listen** on any reply.
+- **Saved chats:** signed-in users can save, list, reopen and delete chats. The free tier keeps 3, deleted after 30 days without a new message. Plans can change both limits.
+- **Sign-language demo:** sample sign-language videos, clearly labelled as a demonstration that does not translate the reply.
+
+### WhatsApp
+
+When the `WHATSAPP_*` variables are set, the same assistant answers on WhatsApp through Meta's Cloud API:
+
+- text messages;
+- voice notes and videos, which are transcribed;
+- optional spoken replies;
+- commands: HELP, RESET, SIGN ON / SIGN OFF, VOICE ON / OFF and VIDEO ON / OFF;
+- a welcome message with a link to the privacy notice on first contact.
+
+### Accounts and plans
+
+- Sign-up with email and password (with email confirmation), or Google sign-in.
+- Password reset by email.
+- An account dashboard with profile, password change, plan, appointments and conversations.
+- Subscriptions through Paystack and Flutterwave (test mode until verified). What each plan unlocks is set in n-equals and checked by an entitlement service, not hard-coded.
+
+### Meal Planner (feature flag)
+
+`/planner`, for signed-in users:
+
+- a short conversation, then a multi-week plan;
+- recipes, portions and approximate nutrition;
+- a priced shopping list when the plan includes one;
+- plan lengths, adjustments and custom goals are plan entitlements.
+
+### Nutritionists (feature flag)
+
+- Nutritionists apply at `/nutritionist/join` with a profile, qualifications, documents (stored privately in Cloudinary) and availability.
+- Reviewers in n-equals approve, request changes, reject or suspend. An advisory AI assessment helps, but it cannot verify credentials.
+- Verified nutritionists are listed at `/nutritionists`, and are suggested under chat replies that refer to professional advice.
+- People request sessions from the profile page.
+
+### Vendors (feature flag)
+
+- Businesses submit products at `/vendor/join`, with ingredients, allergens and where to buy.
+- Reviewers approve each business and product. The app blocks treatment claims and breast-milk substitutes.
+- Approved products appear at `/products`. They can also appear as clearly labelled sponsored suggestions, but only for foods already suggested, and never against an allergy or a child or pregnancy rule.
+
+### Hospitals (feature flag)
+
+- Hospitals register at `/hospital/join`, with details, a map pin, departments, opening times and staff.
+- Patients search at `/hospitals` (OpenStreetMap place search, "use my location", radius, department and accessibility filters).
+- Patients book appointments and message staff by text or voice. Each patient can state communication needs (for example "I prefer to communicate by text").
+- An assistant routes each message and alerts the right staff. Emergencies always get the 112 advice.
+- Staff work in a separate hospital portal.
+
+### Administration (n-equals)
+
+The separate admin app. See [Security and administration](#security-and-administration).
+
+## Accessibility
+
+Accessibility is a product requirement. The **target is WCAG 2.2 Level AA**. This is the target the code is built and checked against; no formal conformance audit has been done.
+
+Implemented in the code:
+
+- **Keyboard:**
+  - every control works from the keyboard;
+  - on phones the assistant is a modal dialog: it traps focus, makes the page behind inert, closes with Escape and returns focus to the button that opened it;
+  - on wider screens it is a non-modal side panel, so the page stays usable;
+  - menus close with Escape, and nothing is available on hover only.
+- **Screen readers:**
+  - one `h1` per page, headings in order, labelled landmarks and a "Skip to content" link on main-site pages;
+  - every control and icon-only button has an accessible name;
+  - chat and hospital conversations are `aria-live` lists, loading states use `role="status"` and urgent notices `role="alert"`;
+  - form errors are linked to their fields (`aria-describedby`, `aria-invalid`) and results are announced.
+- **Visual:**
+  - a 3 px focus ring in its own colour, with at least 3:1 contrast;
+  - text colours meet AA contrast in light and dark mode (checked by hand when the palette was chosen);
+  - state is never shown by colour alone;
+  - layouts are built to reflow at 320 px width and 200% text size;
+  - animations respect `prefers-reduced-motion`.
+- **Readable content:** short replies in plain words, a structured result card, and pictures with alt text and captions.
+- **Inclusive interaction:**
+  - text and voice input, with spoken words shown as text before sending;
+  - replies read aloud only on request, never autoplayed;
+  - every spoken reply is also shown as text;
+  - WhatsApp access without installing anything;
+  - hospital communication preferences.
+- **Sign language:** demonstration only. Real sign-language translation is a research item and is not offered.
+
+Automated axe-core checks run in the UI test suite (kept out of this repository; see [Repository contents](#repository-contents)). Colour contrast is not part of those checks, because jsdom cannot render colour. Screen-reader, zoom and device testing with disabled users is a manual step before each release.
+
+## Target users and use cases
+
+| User                     | Typical use                                                                                                 |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Household cook or parent | "I have ₦2,000. What can I cook tonight?" Plan meals for a family of four with a peanut allergy.            |
+| Parent of a young child  | Meal ideas for a 3-year-old, with general guidance and a prompt to see a health worker for concerns.        |
+| Pregnant woman           | General first-trimester food guidance, foods to be careful with, and when to ask antenatal care.            |
+| Anyone curious           | "What's the nutrition in an orange?" "What can I make with rice and beans?"                                 |
+| Person with a condition  | General food information, with a referral to a dietitian or doctor, and listed nutritionists.               |
+| WhatsApp user            | The same help by text or voice note, without opening a website.                                             |
+| Deaf or blind user       | Text-first chat, voice input and reading aloud, hospital communication preferences, the sign-language demo. |
+| Nutritionist             | Get verified, be listed and receive session requests.                                                       |
+| Food vendor              | List verified products that can be suggested where relevant.                                                |
+| Hospital                 | List departments, take bookings and answer patient messages in an accessible portal.                        |
+| Administrator            | Verify partners, manage plans, AI providers and settings, monitor usage and manage administrator accounts.  |
+
+## Technology stack and architecture
+
+| Layer      | Technology                                                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework  | Next.js 16 (App Router, server actions), React 19, TypeScript                                                                                                       |
+| Styling    | Tailwind CSS 4                                                                                                                                                      |
+| Database   | PostgreSQL with Prisma 7 (`@prisma/adapter-pg`); migrations in `prisma/migrations`, seed data in `prisma/seed`                                                      |
+| Validation | Zod                                                                                                                                                                 |
+| AI         | Google Gemini (`@google/genai`, default) and Anthropic Claude (`@anthropic-ai/sdk`); OpenAI and DeepSeek can be configured in n-equals; a `mock` provider for tests |
+| Speech     | Browser Web Speech API on the website; Gemini and OpenAI transcription and OpenAI text to speech for WhatsApp                                                       |
+| Services   | Resend (email), Cloudinary (documents, photos, videos), Paystack and Flutterwave (payments), Meta WhatsApp Cloud API, OpenStreetMap Nominatim, Google sign-in       |
+| Hosting    | Vercel (two projects: the site and n-equals), with daily cron jobs in `vercel.json`                                                                                 |
+| Tooling    | ESLint, Prettier, Vitest, GitHub Actions (`.github/workflows/ci.yml`)                                                                                               |
+
+```text
+Browser / WhatsApp
+      │
+      ▼
+Next.js app (app/)                      n-equals admin app (n-equals/)
+  pages, server actions, /api/*            pages and server actions, role checks
+      │                                          │
+      └──────────────┬───────────────────────────┘
+                     ▼
+              Shared domain code (lib/)
+  conversation · safety · nutrition · budget · billing · auth · hospitals …
+        │                      │                         │
+        ▼                      ▼                         ▼
+   AI providers         PostgreSQL (Prisma)       External services
+   (server only)                                  (email, payments, media)
+```
+
+Architecture notes:
+
+- **Server-side AI only.** The browser talks to the app's API, never to an AI provider. Keys stay on the server, and keys saved in n-equals are encrypted (AES-256-GCM).
+- **Deterministic facts.** The AI handles intent, questions and wording. Code and data handle nutrition values, prices, totals, allergy filtering and safety rules. The AI returns structured JSON, which is validated before use.
+- **Layered prompts.** Policy, safety rules, conversation state and only the relevant database facts are added for each request.
+- **Folders:**
+  - `app/`: main-site routes and API;
+  - `components/`: UI;
+  - `lib/`: domain logic shared by both apps;
+  - `n-equals/`: the admin app, an npm workspace;
+  - `prisma/`: schema, migrations and seed;
+  - `scripts/`: deployment and administration scripts.
+
+## Installation and setup
+
+Requirements:
+
+- Node.js 22 or later, with npm.
+- PostgreSQL 16 (optional for a first look: without it the app runs with no food or price data).
 
 ```bash
-npm install
-cp .env.example .env.local   # then edit it (see below)
+npm install                  # also runs `prisma generate`
+cp .env.example .env.local   # then fill in what you need (see Configuration)
+npm run db:deploy            # apply migrations to DATABASE_URL
+npm run db:seed              # load foods and price estimates (safe to re-run)
 npm run dev                  # http://localhost:3000
 ```
 
-### Environment variables
+To try the chat without an AI key, set `AI_PROVIDER=mock`. Replies are then canned.
 
-| Variable                                                               | Required                 | Description                                                                                                                 |
-| ---------------------------------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `AI_PROVIDER`                                                          | no                       | `gemini` (default), `claude` or `mock` (no key needed, canned replies)                                                      |
-| `CLAUDE_API_KEY`, `CLAUDE_MODEL`                                       | when using Claude        | Anthropic key (server-side only) and optional model (default `claude-opus-5-5`)                                             |
-| `GEMINI_API_KEY`                                                       | when using Gemini        | Server-side only. Get one at https://aistudio.google.com/apikey                                                             |
-| `GEMINI_MODEL`                                                         | no                       | Model override. Defaults to `gemini-3.8-flash`                                                                              |
-| `GEMINI_FALLBACK_MODEL`                                                | no                       | Backup model when the main one is overloaded, out of quota or unavailable (e.g. `gemini-3.5-flash-lite`). Unset = no backup |
-| `DATABASE_URL`                                                         | for food data            | PostgreSQL connection string                                                                                                |
-| `DATABASE_URL_TEST`                                                    | no                       | Separate database (name must contain `test`) for DB tests                                                                   |
-| `APP_URL`                                                              | in production            | Public address of the main site, for email links and payment return URLs                                                    |
-| `AI_CREDENTIALS_KEY`                                                   | to save AI keys          | 32 random bytes, base64. Encrypts keys saved in n-equals. Never change it once keys are saved                               |
-| `PRIVACY_CONTROLLER_NAME`, `PRIVACY_CONTACT_EMAIL`                     | before launch            | Operator name and privacy contact shown on `/privacy`                                                                       |
-| `PAYSTACK_SECRET_KEY`                                                  | for Paystack             | Test-mode key outside production (ADR-063)                                                                                  |
-| `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_WEBHOOK_HASH`                   | for Flutterwave          | Test-mode key, and the webhook secret hash from the dashboard                                                               |
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | for nutritionist uploads | Qualification documents (private) and photos (ADR-064)                                                                      |
-| `RESEND_API_KEY`, `EMAIL_FROM`                                         | for email                | Resend key and a sender on a verified domain (ADR-065)                                                                      |
-
-To add another AI provider, implement `AIProvider` (`lib/ai/types.ts`) in a new file and add a case to `getAIProvider` in `lib/ai/index.ts`. For the admin page as well, add it to `PROVIDERS`, `createProvider` and `verifyCredential` in `lib/ai/settings/providers.ts` and to the `AIProviderKind` enum in `prisma/schema.prisma`.
-
-## Scripts
-
-| Command                                          | What it does                                                                                                                                                                                  |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run dev`                                    | Dev server                                                                                                                                                                                    |
-| `npm run typecheck`                              | Generate Next.js route types, then `tsc`                                                                                                                                                      |
-| `npm run lint`                                   | ESLint                                                                                                                                                                                        |
-| `npm run format`                                 | Prettier (write); `format:check` to verify                                                                                                                                                    |
-| `npm test`                                       | Vitest: unit, integration, UI and safety tests                                                                                                                                                |
-| `npm run test:db`                                | PostgreSQL integration tests on `<db>_test` (derived from `DATABASE_URL`)                                                                                                                     |
-| `npm run test:coverage`                          | Tests with a coverage report in `coverage/`                                                                                                                                                   |
-| `npm run build`                                  | Production build (CI: `.github/workflows/ci.yml` runs every check on push)                                                                                                                    |
-| `npm run eval:conversations`                     | Live conversation-quality evaluation against the real AI ([conversation-evaluation.md](docs/conversation-evaluation.md))                                                                      |
-| `npm run admin:secrets`                          | Prints new `AI_CREDENTIALS_KEY` and `RATE_LIMIT_SECRET` values                                                                                                                                |
-| `npm run admin:create`                           | Creates an n-equals administrator (or gives an existing account an admin role)                                                                                                                |
-| `npm run db:seed:demo`                           | Sample nutritionists, vendors, hospitals and plans, safe to re-run; `-- --enable-features` also switches the modules on; `DEMO_PASSWORD=…` lets the demo accounts sign in. Refuses production |
-| `npm run dev:admin`                              | n-equals admin app on http://localhost:3001                                                                                                                                                   |
-| `npm run dev:all`                                | Site and admin app together (3000 and 3001); Ctrl+C stops both                                                                                                                                |
-| `npm run demo:record`                            | Records the product demo video with Playwright ([DEMO_README.md](docs/DEMO_README.md))                                                                                                        |
-| `npm run demo:polish`                            | Turns the newest recording into a captioned MP4 with chapters (needs ffmpeg)                                                                                                                  |
-| `npm run whatsapp:setup`                         | Sets the WhatsApp command menu, ice breakers and business profile ([whatsapp.md](docs/whatsapp.md))                                                                                           |
-| `npm run whatsapp:videos`                        | Copies the two WhatsApp sign-language demo videos into Cloudinary and checks them                                                                                                             |
-| `npm run typecheck:admin`, `npm run build:admin` | Type-check and build n-equals                                                                                                                                                                 |
-
-## Status
-
-| Phase | Scope                                                                                          | Status |
-| ----- | ---------------------------------------------------------------------------------------------- | ------ |
-| 1     | Setup, home page, chat launcher/panel, `POST /api/chat`                                        | Done   |
-| 2     | Food database (Postgres + Prisma), food lookup                                                 | Done   |
-| 3     | Meal planning, conversational clarification                                                    | Done   |
-| 4     | Budget planning, price estimates, shopping list                                                | Done   |
-| 5     | Safety layer: allergies, child feeding, pregnancy, medical conditions, medication, emergencies | Done   |
-| 6     | Hardening: DB tests, coverage, accessibility, error states, performance check                  | Done   |
-| 7     | Voice foundation: speak a question, hear the reply (browser Web Speech API)                    | Done   |
-
-Limitations: conversations and rate limits are stored in PostgreSQL when `DATABASE_URL` is set, otherwise in memory (single process). Verified nutrition data covers the 48 foods in `prisma/seed/foods.json`; for any other food the assistant is instructed not to quote figures. Price estimates cover 17 items from the NBS Selected Food Price Watch (May 2026), national or by zone; rice, plantain, meat and fish have no estimate yet because NBS does not state their units (see [price-data.md](docs/price-data.md)).
-
-## Database
+To run the admin app:
 
 ```bash
-npm run db:deploy   # apply migrations to DATABASE_URL
-npm run db:seed     # load foods and price estimates (safe to re-run)
+npm run admin:secrets   # prints AI_CREDENTIALS_KEY and RATE_LIMIT_SECRET for .env.local
+npm run admin:create    # creates the first administrator (super administrator by default)
+npm run dev:admin       # http://localhost:3001
 ```
 
-Nutrition data comes from the FAO/INFOODS West African Food Composition Table (2019), with serving sizes from USDA FoodData Central. See [food-data.md](docs/food-data.md) for provenance and how to rebuild. **WAFCT allows non-commercial use with attribution; commercial use needs a licence request to FAO.**
+## Configuration
 
-## Deploying to Vercel
+All variables are listed with comments in `.env.example`. Copy it to `.env.local`, which git ignores. Never commit real values. Only server code reads these variables; none reach the browser.
 
-`vercel.json` sets the build command to `npm run vercel-build` (`scripts/vercel-build.mjs`), which runs:
+| Variables                                                                                                                                                             | Needed for                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `AI_PROVIDER`                                                                                                                                                         | `gemini` (default), `claude` or `mock`                                                                                                 |
+| `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`                                                                                                             | Gemini replies; the fallback model is used when the main one is busy or out of quota                                                   |
+| `CLAUDE_API_KEY`, `CLAUDE_MODEL`                                                                                                                                      | Claude replies                                                                                                                         |
+| `DATABASE_URL`, `DIRECT_DATABASE_URL`                                                                                                                                 | PostgreSQL; the direct URL is used for migrations when the main one is pooled                                                          |
+| `DATABASE_URL_TEST`                                                                                                                                                   | A separate test database (its name must contain `test`)                                                                                |
+| `APP_URL`                                                                                                                                                             | The public site address, for email links, payment returns and Google sign-in                                                           |
+| `RATE_LIMIT_SECRET`                                                                                                                                                   | Hashing client addresses in the rate-limit table                                                                                       |
+| `AI_CREDENTIALS_KEY`                                                                                                                                                  | Encrypting AI keys saved in n-equals. Back it up and never change it once keys are saved                                               |
+| `RESEND_API_KEY`, `EMAIL_FROM`                                                                                                                                        | Email (confirmation, password reset, notifications). Without them, development logs emails and production reports email as unavailable |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                                                                                                                            | Google sign-in (redirect URI `<APP_URL>/api/auth/google/callback`)                                                                     |
+| `PAYSTACK_SECRET_KEY`, `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_WEBHOOK_HASH`                                                                                           | Paid plans                                                                                                                             |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`                                                                                                | Nutritionist documents and photos, and the WhatsApp demo videos                                                                        |
+| `CRON_SECRET`                                                                                                                                                         | Protecting the daily cron routes                                                                                                       |
+| `NOMINATIM_URL`                                                                                                                                                       | An alternative OpenStreetMap place-search server (optional)                                                                            |
+| `PRIVACY_CONTROLLER_NAME`, `PRIVACY_CONTACT_EMAIL`                                                                                                                    | The operator and contact shown on `/privacy` (required before launch)                                                                  |
+| `CONTACT_EMAIL`, `SOCIAL_LINKS`                                                                                                                                       | Footer contact and social links                                                                                                        |
+| `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_HASH_SECRET`, `WHATSAPP_API_VERSION`                   | WhatsApp (webhook `<APP_URL>/api/whatsapp/webhook`)                                                                                    |
+| `SPEECH_TO_TEXT_PROVIDERS`, `TEXT_TO_SPEECH_PROVIDER`, `OPENAI_API_KEY`, `GEMINI_TRANSCRIBE_MODEL`, `OPENAI_TRANSCRIBE_MODEL`, `OPENAI_TTS_MODEL`, `OPENAI_TTS_VOICE` | WhatsApp voice notes and spoken replies                                                                                                |
+| `SIGN_LANGUAGE_PROVIDER`                                                                                                                                              | The sign-language demo source                                                                                                          |
 
-| Deployment        | Database step                                                                       | Then         |
-| ----------------- | ----------------------------------------------------------------------------------- | ------------ |
-| Production        | `prisma migrate deploy`, then `prisma db seed`                                      | `next build` |
-| Preview           | Skipped (set `RUN_DB_MIGRATIONS=true` only if previews have their **own** database) | `next build` |
-| No `DATABASE_URL` | Skipped with a warning; the app runs without food and price data                    | `next build` |
+Most product settings are not environment variables:
 
-A failed migration or seed fails the deployment, so code never ships against a schema it does not match. The seed is idempotent and keeps the food and price tables in line with `prisma/seed/*.json`; set `SEED_ON_DEPLOY=false` to skip it.
+- feature flags, free-tier limits and the billing grace period are set in n-equals under **Settings**;
+- what each plan unlocks is set under **Plans**;
+- the active AI provider is set under **AI providers**.
 
-Set these in the Vercel project's environment variables:
+## Available scripts
 
-| Variable                                                                    | Notes                                                                                              |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `GEMINI_API_KEY`                                                            | Required for real replies (`AI_PROVIDER` defaults to `gemini`).                                    |
-| `GEMINI_MODEL`                                                              | Optional.                                                                                          |
-| `GEMINI_FALLBACK_MODEL`                                                     | Recommended, e.g. `gemini-3.5-flash-lite`: used when the main model is overloaded or out of quota. |
-| `DATABASE_URL`                                                              | Hosted PostgreSQL (e.g. Neon, Supabase, Vercel Postgres). A pooled URL is fine.                    |
-| `DIRECT_DATABASE_URL`                                                       | Recommended when `DATABASE_URL` is pooled; used for migrations and the seed.                       |
-| `RATE_LIMIT_SECRET`                                                         | Recommended: any long random string, used to hash client addresses in the rate-limit table.        |
-| `AI_CREDENTIALS_KEY`                                                        | Needed to save AI and XEELAA keys in n-equals.                                                     |
-| `APP_URL`                                                                   | The public address, e.g. `https://nutraboom.example`.                                              |
-| `PAYSTACK_SECRET_KEY`, `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_WEBHOOK_HASH` | Optional: paid plans (ADR-063).                                                                    |
-| `PRIVACY_CONTROLLER_NAME`, `PRIVACY_CONTACT_EMAIL`                          | Required before launch: shown on the privacy notice.                                               |
+| Command                                                   | Purpose                                                                    |
+| --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `npm run dev`                                             | Main site in development (port 3000)                                       |
+| `npm run dev:admin`                                       | n-equals in development (port 3001)                                        |
+| `npm run build` / `npm start`                             | Production build and server for the main site                              |
+| `npm run build:admin`                                     | Production build of n-equals                                               |
+| `npm run typecheck` / `npm run typecheck:admin`           | Generate route types, then TypeScript checks                               |
+| `npm run lint`                                            | ESLint                                                                     |
+| `npm run format` / `npm run format:check`                 | Prettier: write, or check only                                             |
+| `npm test`, `npm run test:watch`, `npm run test:coverage` | Vitest (needs the local `tests/` folder)                                   |
+| `npm run db:migrate`                                      | Create a migration in development                                          |
+| `npm run db:deploy`                                       | Apply migrations                                                           |
+| `npm run db:seed`                                         | Load foods and price estimates from `prisma/seed/*.json` (idempotent)      |
+| `npm run vercel-build`                                    | The Vercel build: migrations and seed (production only), then `next build` |
+| `npm run admin:secrets`                                   | Print new `AI_CREDENTIALS_KEY` and `RATE_LIMIT_SECRET` values              |
+| `npm run admin:create`                                    | Create an administrator, or give an existing account an admin role         |
+| `npm run whatsapp:setup`                                  | Set the WhatsApp command menu, ice breakers and business profile           |
+| `npm run whatsapp:videos`                                 | Copy the two sign-language demo videos into Cloudinary and check them      |
 
-The chat route allows up to 60 seconds per request (`maxDuration` in `app/api/chat/route.ts`).
+These scripts are for maintainers only: their files are kept out of this repository (see [Repository contents](#repository-contents)), so they work only in a working copy that has them:
 
-Conversations (ADR-039) and rate limits (ADR-040) are stored in PostgreSQL, so they hold across Vercel instances. Conversations expire after 2 hours; rate-limit rows after their one-minute window.
+- `npm run dev:all`;
+- `npm run test:db`;
+- `npm run db:seed:demo`;
+- `npm run eval:conversations`;
+- `npm run demo:record` and `npm run demo:polish`.
 
-## Settings and outcome cards
+`scripts/food-data/` and `scripts/price-data/` hold the Python builders and catalogues that produce `prisma/seed/foods.json` and `prisma/seed/prices.json`. Regenerate the seed files with them; never edit the files by hand.
 
-- **User settings (⚙ in the chat):** reply language, saved in the browser (ADR-050). Yorùbá and Igbo are Beta.
-- **Outcome cards:** a plan or food question leads with a structured result calculated by the app (ADR-051).
+## Deployment
 
-## Admin app: n-equals
+The project deploys to Vercel as **two projects** from the same repository.
 
-`n-equals/` is the administration app (ADR-060, ADR-061). It shares the database and `lib/` with the main site and is deployed as its own Vercel project (root directory `n-equals`, same environment variables). Keep "Include files outside the Root Directory in the Build Step" on. Both projects install the whole repository from its root with `npm install --include=dev` (`vercel.json`; `n-equals/vercel.json` runs it from `..`, because npm run inside a workspace folder installs only that workspace and skips the root packages that `postinstall` needs): the build needs Prisma, TypeScript and Tailwind, which are dev dependencies, and npm skips those when `NODE_ENV=production` is set. Do not set `NODE_ENV` yourself in Vercel. `.vercelignore` keeps local builds and `.env` files out of CLI uploads. Sections: Overview, Users & roles, Plans, Subscriptions, AI providers, Settings and Audit log. Each administrator sees only what their roles allow.
+### Main site
 
-1. Create the first administrator: `npm run admin:create` (asks for email, name, password and role; the default role is super administrator).
-2. Run `npm run dev:admin` and sign in at http://localhost:3001.
+`vercel.json` sets the build command to `npm run vercel-build` (`scripts/vercel-build.mjs`):
 
-### AI providers
+| Deployment        | Database step                                                                 | Then         |
+| ----------------- | ----------------------------------------------------------------------------- | ------------ |
+| Production        | `prisma migrate deploy`, then `prisma db seed` (`SEED_ON_DEPLOY=false` skips) | `next build` |
+| Preview           | Skipped, unless `RUN_DB_MIGRATIONS=true` (only with a separate database)      | `next build` |
+| No `DATABASE_URL` | Skipped with a warning                                                        | `next build` |
 
-Under **AI providers**, an administrator chooses which AI key and model chat uses: Google Gemini, Anthropic Claude, OpenAI or DeepSeek (ADR-047, ADR-059). Saving keys needs `DATABASE_URL` and `AI_CREDENTIALS_KEY`.
+A failed migration or seed fails the deployment. The daily cron jobs in `vercel.json` do three things:
 
-1. Add a key: choose the provider, enter the model ID and the key. The key is tested with one tiny request, then encrypted and saved. Tick "Use this configuration" or activate it later.
+- delete expired conversations;
+- send appointment reminders;
+- clean up closed hospital conversations.
 
-**XEELAA API** (ADR-052): paste a key in the form `xla_<key id>:<secret>`. It is checked with an authenticated XEELAA call, then encrypted. Use the **Use XEELAA API** switch to turn it on or off. While it is on, chat tries XEELAA first. If XEELAA fails, or its key stops working, chat answers with the default AI settings, and the page shows why. Messages go to XEELAA while it is on, so update the privacy notice first.
+The cron routes need `CRON_SECRET`.
 
-Only one configuration is active. With none active, chat uses `GEMINI_API_KEY` and the other environment variables. Other server instances pick up a switch within 30 seconds. Deleting a key removes it from the database only: also revoke it in the provider's dashboard. Before relying on a new provider, run the safety prompts (pregnancy, child under 5, allergy, medication) against it.
+### n-equals
 
-### Google sign-in (ADR-071)
+- A second Vercel project with root directory `n-equals`, its own domain and the same environment variables. Keep "Include files outside the Root Directory in the Build Step" on.
+- Both projects install from the repository root with `npm install --include=dev`, because the build needs Prisma, TypeScript and Tailwind. Do not set `NODE_ENV` yourself in Vercel.
+- `.vercelignore` keeps local builds and `.env` files out of CLI uploads.
 
-1. In Google Cloud Console, create an OAuth client of type "Web application" (APIs & Services > Credentials), after setting up the OAuth consent screen with your app name, logo and privacy page (`<APP_URL>/privacy`).
-2. Add the authorised redirect URI `<APP_URL>/api/auth/google/callback` (and `http://localhost:3000/api/auth/google/callback` for local testing).
-3. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `APP_URL`. "Continue with Google" then appears on the log-in and sign-up pages.
+### Before going live
 
-### Public site (ADR-070)
+- Use a paid AI tier.
+- Verify the sending domain in Resend.
+- Run real test-mode payments before using live keys.
+- Have the safety rules and the privacy notice reviewed.
+- Obtain the FAO licence for commercial use of the WAFCT data.
 
-Footer contact details come from `CONTACT_EMAIL` (or `PRIVACY_CONTACT_EMAIL`) and social links from `SOCIAL_LINKS`; unset ones are hidden. Logo files are in `public/brand`.
+## Security and administration
 
-### Hospitals and accessibility (ADR-068, ADR-069)
+### Authentication
 
-1. Set `CRON_SECRET` in Vercel (the daily cron in `vercel.json` sends appointment reminders and deletes conversations 90 days after closing). Set `PRIVACY_CONTACT_EMAIL`: it goes in the User-Agent of OpenStreetMap place searches, as their usage policy requires.
-2. Switch on **Hospitals** under Settings, and set the default search distance there.
-3. A hospital administrator signs in, opens `/hospital/join`, adds the details, pins the hospital on the map, adds departments with opening times and staff (each needs their own account), and submits. Under **Hospitals** in n-equals, a reviewer checks and approves it.
-4. Verified hospitals holding **Listed in the hospital directory** (a hospital plan, or the free tier) appear at `/hospitals`. Patients book appointments and message staff by text or voice; the assistant routes each message and alerts the right staff. Emergencies always get the 112 advice.
+- Accounts sign in with email and password (scrypt hashes) or Google.
+- Sessions are stored in the database, and only a SHA-256 hash of each cookie token is kept.
+- Main-site sessions last 30 days and renew as they are used. n-equals sessions end 8 hours after sign-in, and their cookie is `SameSite=Strict`.
+- Email confirmation and password-reset links are one-time tokens; only their hash is stored, and a reset link expires after 1 hour.
+- Changing or resetting a password ends every session of the account.
+- Sign-in, sign-up and reset attempts are rate-limited per client address.
 
-Speech uses the browser (n-equals **Audio** shows the providers; N-ATLaS is listed as not available). Sign language is not offered.
+### Authorisation
 
-### Vendors (ADR-067)
+- n-equals uses granular roles:
+  - super administrator;
+  - platform administrator;
+  - nutritionist administrator;
+  - vendor administrator;
+  - hospital administrator;
+  - support administrator;
+  - finance administrator.
+- Each role maps to permissions in `lib/auth/permissions.ts`.
+- Every page and server action checks the permission on the server. The menu only hides what a role cannot use.
+- The last super administrator cannot lose that role.
+- Partner portals (nutritionist, vendor, hospital) check membership of their own organisation.
 
-Switch on **Vendors** under Settings. A business owner signs in, opens `/vendor/join`, completes the business profile and adds products (with ingredients, allergens, an optional label and where to buy), then submits them. Under **Vendors** in n-equals, a reviewer approves the business and each product; the app blocks treatment claims and breast-milk substitutes. Verified products of a business holding the **Products recommended to users** entitlement (a vendor plan, or the free tier) appear at `/products` and as clearly labelled sponsored suggestions in chat, meal plans and shopping lists, only for foods already suggested and never against an allergy or child or pregnancy rule.
+### n-equals sections
 
-### Meal Planner (ADR-066)
+- **Overview:** platform figures (counts only).
+- **Platform users:** search, suspend (ends all sessions) and delete accounts.
+- **User activity** (`users.activity`: super, platform and support administrators):
+  - one row per account: status, plan, joined, last active, and counts of saved chats, meal plans, bookings and hospital message threads;
+  - summary figures for 24 hours, 7 days and 30 days;
+  - search by name or email; filter by account type, status and activity window; sort by last active, joined, chats, plans or name;
+  - shows counts and dates only, never what anyone wrote.
+- **Administrators:**
+  - grant and remove roles;
+  - add administrators;
+  - **reset another administrator's password** (`roles.manage`, super administrators only).
+- **Partner review:** Nutritionists, Vendors and Hospitals.
+- **Billing:** Plans and Subscriptions.
+- **Configuration:** AI providers, Audio and Settings.
+- **Audit log**, and **My profile** (name and own password change).
 
-Switch on **Meal Planner** under Settings. Signed-in users open `/planner`: a short conversation, then a plan with recipes, portions, approximate nutrition and (when the plan includes it) a priced shopping list. Lengths, plans per month, adjustments, shopping lists and custom goals are entitlements: set the free tier under Settings and the rest on each plan. A plan uses about 4 AI calls per week, so use a paid AI tier in production.
+### Administrator password reset
 
-### Nutritionists (ADR-064)
+1. The acting administrator chooses another administrator and confirms with their own password.
+2. The target's password stops working at once, and the target is signed out of every session (main site and n-equals).
+3. A one-time reset link, valid for 1 hour, is emailed to the target's own address.
+4. The target chooses a new password through the main site's reset page. The usual password policy applies: at least 10 characters.
 
-1. Switch on **Nutritionists** under Settings. Set the Cloudinary variables so nutritionists can upload documents.
-2. A nutritionist signs in on the main site, opens `/nutritionist/join`, completes the profile, qualifications, documents and availability, and submits.
-3. Under **Nutritionists** in n-equals, a reviewer with the nutritionist-review permission opens the profile. They read the advisory analysis, open each document and check registrations, then approve, request changes, reject or suspend.
-4. A verified nutritionist is listed when they hold the **Listed in the nutritionist directory** entitlement: from a nutritionist plan, a grant, or the free tier if you turn it on under Settings.
+Nobody else sees or sets the new password. The link and token are never shown in n-equals. The action is rate-limited and recorded in the audit log, with IDs only.
 
-Listed nutritionists appear at `/nutritionists` and, when chat refers someone to professional advice, under the reply. People request sessions from the profile page; fees are paid to the nutritionist directly.
+The action is refused in four cases:
 
-### Plans, subscriptions and settings
+- email is not configured;
+- the target is the actor's own account (use My profile instead);
+- the target is not an administrator;
+- the target is suspended.
 
-- **Settings:** feature flags (all off by default), the free tier's limits and the billing grace period (ADR-062).
-- **Plans:** price, interval and what each plan unlocks. Limits are never hard-coded; the app asks the entitlement service.
-- **Subscriptions:** current subscribers, manual grants for a set number of days, and ending a subscription.
+### Other safeguards
 
-Payments (ADR-063): create each plan at Paystack and/or Flutterwave with the same price and interval, enter its plan code or id on the plan, set the provider keys and the webhook URLs (`<APP_URL>/api/webhooks/paystack`, `<APP_URL>/api/webhooks/flutterwave`), then switch on **Paid plans**. Paid plans have only been tested with mocked provider responses: run real test-mode checkouts, including a renewal and a failed renewal, before using live keys.
+- Input validation with Zod.
+- Request size limits and rate limits on chat.
+- Parameterised queries through Prisma.
+- Safe error messages: no stack traces, provider errors or prompts are shown.
+- Signed payment and WhatsApp webhooks.
+- Request logs hold IDs, intent, timings and outcomes, never message text or health details.
 
 ## Privacy and data
 
-Users see these facts in plain language at `/privacy` (ADR-053), which also names the AI services currently in use. Set `PRIVACY_CONTROLLER_NAME` and `PRIVACY_CONTACT_EMAIL` so it shows who runs the service and where to send privacy questions.
+`/privacy` explains to users, in plain language, what is stored and which AI services are in use.
 
-| Data                                                                                                                  | Where                                                                                                                                           | How long                                                                                                    |
-| --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Conversation messages and facts the user shares (household, ages, pregnancy, conditions, allergies, budget, location) | `Conversation` table                                                                                                                            | Deleted 2 hours after the last message (ADR-039)                                                            |
-| Rate-limit counters                                                                                                   | `RateLimit` table, keyed by an HMAC of the client address (never the address)                                                                   | About one minute (ADR-040)                                                                                  |
-| Request logs                                                                                                          | Server logs                                                                                                                                     | IDs, intent, timings, outcomes and counts only: never message text, health details, food names or addresses |
-| Saved AI provider keys (admin page)                                                                                   | `AIProviderConfig` table, AES-256-GCM encrypted; only a masked hint is ever shown                                                               | Until an admin deletes the key; the audit log (metadata only) is kept                                       |
-| Voice (optional)                                                                                                      | The browser's speech service: in Chrome and Edge, recognition audio goes to the browser vendor                                                  | Not stored by Nutraboom Equals; only the transcript the user sends is processed                             |
-| WhatsApp contacts (when enabled)                                                                                      | `WhatsAppContact` (an HMAC of the phone number, consent, conversation ID) and `WhatsAppMessage` (message IDs and delivery statuses, never text) | Messages themselves live in `Conversation` and expire as above (ADR-087)                                    |
-| Saved chats (signed-in users)                                                                                         | `Conversation` rows with the owner (`userId`) and a title                                                                                       | Until the user deletes them, or after the plan's days without a new message (free: 30; ADR-090)             |
-| WhatsApp voice notes and videos                                                                                       | Memory only, sent to the speech provider (Gemini or OpenAI)                                                                                     | Never stored; spoken replies are uploaded to WhatsApp, not kept by the app                                  |
+- **Chats:** unsaved chats are deleted 2 hours after the last message. Saved chats are kept until the user deletes them, or until the plan's retention period passes.
+- **WhatsApp:** contacts are stored as an HMAC of the phone number. Voice notes are never stored.
+- **Admin activity monitoring:** reads counts and dates only.
+- **Provider terms:** messages are sent to the active AI provider. Check that provider's data terms for your API tier before real users arrive.
 
-Messages are sent to Google Gemini to generate replies. Check Google's terms for your API tier (free-tier data may be used to improve Google's products) before real users arrive.
+## Roadmap and future improvements
 
-## Quality checks
+**Confirmed before launch** (planned and needed):
 
-- **Tests:** unit, integration (including real PostgreSQL via `npm run test:db`), UI and safety suites. Coverage is about 90% of lines in `lib/`, `components/` and `app/`.
-- **Accessibility:** automated axe-core checks run in `tests/ui/a11y.test.tsx`. On wider screens the chat is a non-modal side panel, so the page stays usable; on phones it fills the screen and acts as a modal (focus trap, background `inert`). Escape closes it and focus returns to the launcher (ADR-083). Pictures in replies have alt text and captions (ADR-085). Colour contrast meets WCAG AA in light and dark mode.
-- **Performance:** the home page is static. A first visit downloads about 4 KB of HTML and about 180 KB of compressed JavaScript (mostly React and Next.js), with no layout shift. No server code or secrets reach the browser (checked in the production bundle).
+- Deploy both apps, with hosted PostgreSQL and a paid AI tier.
+- Professional review of the safety rules (pregnancy, child feeding, emergency signs, referrals).
+- Legal review of the privacy notice against the NDPA 2023.
+- FAO licence for commercial use of the food composition data.
+- Live tests of Resend, Cloudinary, Paystack and Flutterwave in test mode, and of the newer AI providers against the safety prompts.
+- Native-speaker review of Yorùbá and Igbo replies before removing the Beta label.
+- WhatsApp: a permanent access token and live testing of voice replies (`OPENAI_API_KEY`).
+- Monitoring and alerts on the logged error events.
 
-## Email and WhatsApp
+**Known gaps:**
 
-- **Email:**
-  - Account and notification emails go through Resend when `RESEND_API_KEY` and `EMAIL_FROM` are set.
-  - Each one is branded HTML with a plain-text copy (`lib/email/templates.ts`, ADR-086).
-  - Delivery is logged as `email_sent` or `email_failed` with the template and Resend's ID, never the address.
-  - `APP_URL` must be the public site: the logo and links use it.
-- **WhatsApp:** people can chat on WhatsApp through Meta's Cloud API (ADR-087). Set the `WHATSAPP_*` variables and register `<APP_URL>/api/whatsapp/webhook`. Voice notes are transcribed and can be answered by voice, and people can send HELP, RESET, SIGN ON / SIGN OFF, VOICE ON / OFF and VIDEO ON / OFF (ADR-090). Full setup, consent, commands and testing steps are in [docs/whatsapp.md](docs/whatsapp.md).
+- Only 48 single foods have verified nutrition data. Common dishes (jollof rice, moi moi, egusi soup) have none.
+- Several staples have no price estimate, because the source does not state their units (including rice, plantain, meat and fish).
+- Prices are zone averages from May 2026 and need a regular refresh.
+- Replies are not streamed.
+- Food lookup matches named foods only: no pronouns, no misspellings, and at most 3 foods per message.
+- Paid plans have only been tested with mocked provider responses.
+- Sign language is a demonstration, not a translation.
 
-## Voice
+**Possible future work** (not committed):
 
-In browsers that support speech recognition (Chrome, Edge, Safari), a microphone button appears next to Send. The spoken question is placed in the message box so the user can check it before sending. The reply to a spoken question is read aloud, with any urgent-care notice first, and "Stop reading" ends it. Any reply can be heard on request with its **Listen** button, which works in any browser that can speak, including when the question was typed. Firefox users type as usual. Voice uses the browser's Web Speech API (ADR-043); in Chrome and Edge the audio is processed by the browser vendor's speech service.
+- Real sign-language translation (research stage).
+- Server-generated voice.
+- More Nigerian languages, such as Hausa.
+- A curated dish database.
+- Live market prices.
+- Native apps.
+- Richer usage analytics, such as trends per feature or an export of the User activity page.
+
+## Repository contents
+
+To keep the shared repository focused on the product, internal development resources are kept out of version control (see `.gitignore`):
+
+- `docs/`: internal design notes, decision records and runbooks;
+- `tests/`: the Vitest suites;
+- `CLAUDE.md`, `.claude/` and `.playwright-mcp/`: assistant and browser-tool files;
+- development-only scripts: the demo recorder, conversation evaluation, test database runner, combined dev runner and demo data seed.
+
+These files exist only in maintainers' working copies. The GitHub Actions workflow skips the test step when `tests/` is absent; type checking, linting, formatting and the production build still run.

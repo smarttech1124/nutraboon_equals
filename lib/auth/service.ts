@@ -305,6 +305,46 @@ export class AuthService {
     return { ok: true };
   }
 
+  /**
+   * An administrator resets another administrator's password from n-equals.
+   * The actor confirms their own password first (a stolen admin session alone
+   * is not enough). The target's password stops working at once, every one of
+   * their sessions ends, and a one-time reset token (valid 1 hour) is
+   * returned for the caller to email to the target. Nobody sees the new
+   * password: the target chooses it through the emailed link.
+   */
+  async adminPasswordReset(
+    actorId: string,
+    actorPassword: string,
+    targetId: string,
+  ): Promise<AuthResult<{ token: string; email: string }>> {
+    if (actorId === targetId) {
+      return { ok: false, error: "To change your own password, use My profile." };
+    }
+    const actor = await this.repo.findUserById(actorId);
+    if (!actor || actor.status !== "active") return { ok: false, error: "Please sign in again." };
+    if (
+      actor.passwordHash === NO_PASSWORD ||
+      !(await verifyPassword(actorPassword, actor.passwordHash))
+    ) {
+      return { ok: false, error: "Your password is not correct." };
+    }
+    const target = await this.repo.findUserById(targetId);
+    if (!target || (await this.repo.adminRoles(targetId)).length === 0) {
+      return { ok: false, error: "That administrator account no longer exists." };
+    }
+    if (target.status !== "active") {
+      return { ok: false, error: "That account is suspended. Reactivate it first." };
+    }
+    await this.repo.updatePassword(targetId, NO_PASSWORD);
+    await this.repo.deleteUserSessions(targetId);
+    return {
+      ok: true,
+      token: await this.issueToken(targetId, "reset_password"),
+      email: target.email,
+    };
+  }
+
   issueEmailVerification(userId: string): Promise<string> {
     return this.issueToken(userId, "verify_email");
   }

@@ -50,3 +50,22 @@ next-env.d.ts
 
 # Demo video recordings (npm run demo:record)
 /demo-output
+
+# Internal development resources, kept locally but not shared in the repository.
+# The app builds and deploys without them (see README.md, "Repository contents").
+/.claude/
+/.playwright-mcp/
+/docs/
+/tests/
+/CLAUDE.md
+/.vitest/
+/_voice.ts
+
+# Development, testing and demo scripts. Kept: vercel-build.mjs (deployment),
+# admin-create.ts, admin-secrets.ts and prompt.ts (production administration),
+# whatsapp/ (WhatsApp setup), food-data/ and price-data/ (seed data provenance).
+/scripts/demo/
+/scripts/eval/
+/scripts/dev-all.mjs
+/scripts/test-db.mjs
+/scripts/seed-demo.ts

@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { Pagination } from "@admin/components/pagination";
 import { NotAllowed, PageHeader, SearchForm } from "@admin/components/shell";
-import { AddAdminForm, RoleEditor } from "@admin/components/users";
+import { AddAdminForm, ResetAdminPasswordForm, RoleEditor } from "@admin/components/users";
 import { adminAccess } from "@admin/lib/access";
 import { pageParam, paging } from "@admin/lib/pagination";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { can, ROLE_LABEL } from "@/lib/auth/permissions";
 import { getPrisma } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
-import { addAdminAction, setAdminRoleAction } from "./actions";
+import { addAdminAction, resetAdminPasswordAction, setAdminRoleAction } from "./actions";
 
 export const metadata: Metadata = { title: "Administrators" };
 
@@ -58,6 +58,15 @@ export default async function AdminsPage({ searchParams }: PageProps<"/admins">)
       },
     },
   });
+  // Everyone else who could need a reset (administrators are few).
+  const resettable = canRoles
+    ? await prisma.user.findMany({
+        where: { adminRoles: { some: {} }, status: "active", id: { not: access.user.id } },
+        orderBy: { name: "asc" },
+        take: 200,
+        select: { id: true, name: true, email: true },
+      })
+    : [];
   const count = `${p.total} administrator${p.total === 1 ? "" : "s"}`;
 
   return (
@@ -121,6 +130,14 @@ export default async function AdminsPage({ searchParams }: PageProps<"/admins">)
         )}
       </Card>
       <Pagination path="/admins" query={{ q }} paging={p} />
+      {canRoles && resettable.length > 0 && (
+        <Card
+          title="Reset an administrator's password"
+          description="For a forgotten password or an account that may be compromised. Their password stops working, they are signed out everywhere, and a one-hour reset link is emailed to them. You never see or set their new password."
+        >
+          <ResetAdminPasswordForm action={resetAdminPasswordAction} admins={resettable} />
+        </Card>
+      )}
       {canRoles && (
         <Card
           title="Add an administrator"

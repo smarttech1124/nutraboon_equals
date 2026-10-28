@@ -223,3 +223,61 @@ export function AddAdminForm({ action }: { action: AddAdminAction }) {
     </form>
   );
 }
+
+/**
+ * Resets another administrator's password (ADR-091). The acting administrator
+ * confirms with their own password; the target gets a reset link by email.
+ * React clears the fields after each submit, so the password is never kept.
+ */
+export function ResetAdminPasswordForm({
+  action,
+  admins,
+}: {
+  action: Action;
+  admins: { id: string; name: string; email: string }[];
+}) {
+  const [state, formAction, pending] = useActionState(action, IDLE);
+  return (
+    <form
+      action={formAction}
+      className="grid gap-4 sm:grid-cols-2"
+      autoComplete="off"
+      onSubmit={(event) => {
+        const select = event.currentTarget.elements.namedItem("userId") as HTMLSelectElement;
+        const name = select.selectedOptions[0]?.text ?? "this administrator";
+        if (
+          !window.confirm(
+            `Reset the password of ${name}? Their current password stops working and they are signed out everywhere until they use the emailed link.`,
+          )
+        ) {
+          event.preventDefault();
+        }
+      }}
+    >
+      <SelectField id="reset-admin" name="userId" label="Administrator">
+        {admins.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name} ({a.email})
+          </option>
+        ))}
+      </SelectField>
+      <Field
+        id="reset-confirm-password"
+        name="password"
+        type="password"
+        label="Your password"
+        autoComplete="current-password"
+        required
+        hint="Confirms it is you making this change."
+      />
+      <div className="flex flex-col gap-2 sm:col-span-2">
+        <Message state={state} />
+        <div>
+          <Button type="submit" variant="danger" disabled={pending}>
+            {pending ? "Resetting…" : "Reset password"}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+}
